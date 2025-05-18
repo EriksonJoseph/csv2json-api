@@ -6,8 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # อ่านค่า PORT จาก environment variables
-PORT = int(os.getenv("PORT", 8000))
-print(f"Hello world PORT: {PORT}")
+PORT = int(os.getenv("APP_PORT", 8000))
 
 # สร้าง FastAPI application
 app = FastAPI(
