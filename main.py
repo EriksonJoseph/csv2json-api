@@ -1,4 +1,13 @@
 from fastapi import FastAPI
+import os
+from dotenv import load_dotenv
+
+# โหลด environment variables
+load_dotenv()
+
+# อ่านค่า PORT จาก environment variables
+PORT = int(os.getenv("PORT", 8000))
+print(f"Hello world PORT: {PORT}")
 
 # สร้าง FastAPI application
 app = FastAPI(
@@ -16,3 +25,8 @@ async def hello_world():
 @app.get("/")
 async def root():
     return {"message": "Welcome to CSV2JSON API. Try /api/hello endpoint."}
+
+# รัน server ถ้าเรียกไฟล์นี้โดยตรง
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=True)
