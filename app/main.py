@@ -11,6 +11,8 @@ from app.routers import router
 # เรียกใช้งาน settings
 settings = get_settings()
 
+print(f"Hello developer")
+
 # สร้าง FastAPI application
 app = FastAPI(
     title=settings.APP_NAME,
