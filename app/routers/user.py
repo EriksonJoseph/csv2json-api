@@ -7,5 +7,5 @@ router = APIRouter(
 )
 
 @router.get("/")
-async def hello_users():
-  return "Hello world user!"
+async def get_users():
+  return "Get users api is under construction!"
