@@ -11,8 +11,9 @@ from app.routers import router
 # เรียกใช้งาน settings
 settings = get_settings()
 
-print(f"Hello developer")
+# print(f"🚀🚀🚀🚀🚀🚀 Hello developer 🚀🚀🚀🚀🚀🚀")
 
+# print(f"⚙️⚙️⚙️⚙️  Creating FastAPI application")
 # สร้าง FastAPI application
 app = FastAPI(
     title=settings.APP_NAME,
@@ -22,7 +23,9 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json"
 )
+# print(f"🎉🎉🎉🎉  Done Creating FastAPI application")
 
+# print("⚙️⚙️⚙️⚙️  Adding CORS middleware")
 # เพิ่ม CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -31,7 +34,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# print(f"🎉🎉🎉🎉  Done Adding CORS middleware")
 
+# print("⚙️⚙️⚙️⚙️  Adding Time process log")
 # เพิ่ม middleware สำหรับบันทึกเวลาที่ใช้ในการประมวลผล
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
@@ -41,6 +46,9 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
     return response
 
+# print(f"🎉🎉🎉🎉  Done Adding Time process log")
+
+# print("⚙️⚙️⚙️⚙️  Adding Application router")
 # เพิ่ม router หลัก
 app.include_router(router, prefix="/api")
 
@@ -52,16 +60,22 @@ async def root():
         "docs": "/api/docs",
         "version": "1.0.0"
     }
+# print(f"🎉🎉🎉🎉  Done Adding Application router")
+
 
 # จัดการ startup event
 @app.on_event("startup")
 async def startup_event():
+    # print("On Start up event")
     # เชื่อมต่อกับ MongoDB
+    # print("⚙️⚙️⚙️⚙️  Initializing Database")
     initialize_db()
+    # print("🎉🎉🎉🎉  Done Initializing Database")
 
 # จัดการ shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
+    # print("On Shutdown event")
     # ทำความสะอาดทรัพยากรต่างๆ ถ้าจำเป็น
     pass
 

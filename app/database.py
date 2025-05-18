@@ -2,6 +2,7 @@ from pymongo import MongoClient
 from app.config import get_settings
 
 settings = get_settings()
+print("📂 📂 📂 📂 📂 📂 📂 📂 📂 📂 📂 📂 at database py setting")
 
 # ฟังก์ชันสำหรับเชื่อมต่อ MongoDB
 def get_database():
@@ -18,16 +19,6 @@ def initialize_db():
     try:
         client = MongoClient(settings.MONGODB_URI)
         db = client[settings.MONGODB_DB]
-        
-        # สร้าง index สำหรับข้อมูล entities
-        if "entities" in db.list_collection_names():
-            entities_collection = db["entities"]
-            
-            # สร้าง index ต่างๆ
-            entities_collection.create_index("Entity_LogicalId", unique=True)
-            entities_collection.create_index("Entity_EU_ReferenceNumber")
-            entities_collection.create_index("NameAlias_WholeName")
-        
         print(f"✅ เชื่อมต่อ MongoDB สำเร็จ: {settings.MONGODB_URI}")
         client.close()
         return True
