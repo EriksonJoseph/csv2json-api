@@ -22,7 +22,7 @@ async def create_user(user: UserCreate):
     pprint.pp(user)
 
     # เชื่อมต่อกับ collection users
-    users_collection = get_collection("users")
+    users_collection = await get_collection("users")
     
     # ตรวจสอบว่า username ซ้ำหรือไม่
     existing_user = users_collection.find_one({"username": user.username})
@@ -62,7 +62,7 @@ async def create_user(user: UserCreate):
 @tracker.measure_async_time
 async def update_user(user_id: str, user_update: UserUpdate):
     # เชื่อมต่อกับ collection users
-    users_collection = get_collection("users")
+    users_collection = await get_collection("users")
     
     # ตรวจสอบความถูกต้องของ ID
     if not ObjectId.is_valid(user_id):
@@ -124,18 +124,20 @@ async def update_user(user_id: str, user_update: UserUpdate):
 @router.get("/")
 @tracker.measure_async_time
 async def get_all_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100)):
-  print(f"page: {page} | limit: {limit}")
+  print(">>>>>>>>>>>>>>>>>>>>>>>> 1")
   # เชื่อมต่อกับ collection users
-  users_collection = get_collection("users")
-  
+  users_collection = await get_collection("users")
+  print(">>>>>>>>>>>>>>>>>>>>>>>> 2")
   # คำนวณ skip สำหรับ pagination
   skip = (page - 1) * limit
   
   # นับจำนวน users ทั้งหมด (ใช้ await กับ Motor)
-  total_users = users_collection.count_documents({})
+  total_users = await users_collection.count_documents({})
+  print(">>>>>>>>>>>>>>>>>>>>>>>> 3")
   
   # ดึงข้อมูลโดยมีการทำ pagiantion
-  users = list_serial(users_collection.find().skip(skip).limit(limit))
+  users = list_serial(await users_collection.find().skip(skip).limit(limit))
+  print(">>>>>>>>>>>>>>>>>>>>>>>> 4")
 
   # ส่งคืนข้อมูลพร้อม metadata สำหรับ pagination
   return {
@@ -151,7 +153,7 @@ async def get_all_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1,
 @tracker.measure_async_time
 async def get_user(user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการดึงข้อมูล")):
     # เชื่อมต่อกับ collection users
-    users_collection = get_collection("users")
+    users_collection = await get_collection("users")
     
     # ตรวจสอบความถูกต้องของ ID
     if not ObjectId.is_valid(user_id):
@@ -174,7 +176,7 @@ async def get_user(user_id: str = Path(..., description="ID ของผู้�
 @tracker.measure_async_time
 async def delete_user(user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการลบ")):
     # เชื่อมต่อกับ collection users
-    users_collection = get_collection("users")
+    users_collection = await get_collection("users")
     
     # ตรวจสอบความถูกต้องของ ID
     if not ObjectId.is_valid(user_id):
