@@ -15,7 +15,6 @@ router = APIRouter(
   responses={404: { "description": "Not Found"}}
 )
 
-# เพิ่ม endpoint POST สำหรับสร้างผู้ใช้ใหม่
 @router.post("/")
 @tracker.measure_async_time
 async def create_user(user: UserCreate):
