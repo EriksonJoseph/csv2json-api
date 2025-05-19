@@ -3,10 +3,11 @@ from app.database import get_collection
 from app.schema.schemas import list_serial, individual_serial
 from app.models.user import UserCreate
 from bson import ObjectId
-from typing import List, Dict, Any
 import pprint
 from datetime import datetime
 from app.models.user import UserCreate, UserUpdate
+from app.utils.performance import measure_async_time
+from app.utils.advanced_performance import tracker, TimedBlock
 
 router = APIRouter(
   prefix="/user",
@@ -16,6 +17,7 @@ router = APIRouter(
 
 # เพิ่ม endpoint POST สำหรับสร้างผู้ใช้ใหม่
 @router.post("/")
+@tracker.measure_async_time
 async def create_user(user: UserCreate):
     pprint.pp(user)
 
@@ -57,6 +59,7 @@ async def create_user(user: UserCreate):
     }
 
 @router.patch("/{user_id}")
+@tracker.measure_async_time
 async def update_user(user_id: str, user_update: UserUpdate):
     # เชื่อมต่อกับ collection users
     users_collection = get_collection("users")
@@ -119,6 +122,7 @@ async def update_user(user_id: str, user_update: UserUpdate):
     }
 
 @router.get("/")
+@tracker.measure_async_time
 async def get_all_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100)):
   print(f"page: {page} | limit: {limit}")
   # เชื่อมต่อกับ collection users
@@ -144,6 +148,7 @@ async def get_all_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1,
   }
 
 @router.get("/{user_id}")
+@tracker.measure_async_time
 async def get_user(user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการดึงข้อมูล")):
     # เชื่อมต่อกับ collection users
     users_collection = get_collection("users")
@@ -166,6 +171,7 @@ async def get_user(user_id: str = Path(..., description="ID ของผู้�
     }
 
 @router.delete("/{user_id}")
+@tracker.measure_async_time
 async def delete_user(user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการลบ")):
     # เชื่อมต่อกับ collection users
     users_collection = get_collection("users")
