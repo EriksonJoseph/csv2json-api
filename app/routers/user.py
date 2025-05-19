@@ -17,7 +17,7 @@ async def get_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=
   # คำนวณ skip สำหรับ pagination
   skip = (page - 1) * limit
   
-  # นับจำนวน users ทั้งหมด
+  # นับจำนวน users ทั้งหมด (ใช้ await กับ Motor)
   total_users = await users_collection.count_documents({})
   
   # ดึงข้อมูลแบบ pagination
@@ -35,6 +35,6 @@ async def get_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=
     "total": total_users,
     "page": page,
     "limit": limit,
-    "pages": (total_users + limit - 1) // limit,  # จำนวนหน้าทั้งหมด
+    "pages": (total_users + limit - 1) // limit,
     "users": users
   }
