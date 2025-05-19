@@ -1,4 +1,3 @@
-from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 from app.config import get_settings
 
@@ -7,7 +6,7 @@ settings = get_settings()
 # ฟังก์ชันสำหรับเชื่อมต่อ MongoDB
 def get_database():
     # ใช้ AsyncIOMotorClient แทน MongoClient
-    client = AsyncIOMotorClient(settings.MONGODB_URI)
+    client = MongoClient(settings.MONGODB_URI)
     return client[settings.MONGODB_DB]
 
 # ฟังก์ชันสำหรับเรียกใช้ collection ใน MongoDB
@@ -19,7 +18,7 @@ def get_collection(collection_name: str):
 async def initialize_db():
     try:
         # ใช้ AsyncIOMotorClient แทน MongoClient
-        client = AsyncIOMotorClient(settings.MONGODB_URI)
+        client = MongoClient(settings.MONGODB_URI)
         db = client[settings.MONGODB_DB]
         print(f"✅ เชื่อมต่อ MongoDB สำเร็จ: {settings.MONGODB_URI}")
         return True
