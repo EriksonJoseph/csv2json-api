@@ -13,6 +13,7 @@ router = APIRouter(
 async def service_1():
   # เรียกใช้บริการอ่านและบันทึกข้อมูล CSV
   result = await read_and_save_csv_to_mongodb("data/sample_30k_rows.csv")
+  # result = await read_and_save_csv_to_mongodb("data/20250515-FULL-1_0.csv")
   
   # ถ้าการทำงานไม่สำเร็จให้คืนค่า HTTPException
   if not result["success"]:
