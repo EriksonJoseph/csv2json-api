@@ -4,6 +4,7 @@ import csv
 from typing import Dict, List, Any
 from app.database import get_collection
 from app.utils.advanced_performance import tracker, TimedBlock
+import pprint
 
 @tracker.measure_async_time
 async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.csv", batch_size: int = 1000) -> Dict[str, Any]:
@@ -19,7 +20,6 @@ async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.cs
         Dictionary ที่ประกอบด้วยผลลัพธ์ของการทำงาน
     """
     try:
-        print(">>>>>>>>>>>>>>>>>> 1")
         # ตรวจสอบว่าไฟล์มีอยู่หรือไม่
         if not os.path.exists(file_path):
             return {
@@ -27,14 +27,11 @@ async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.cs
                 "message": f"❌ ไม่พบไฟล์ CSV ที่ {file_path}"
             }
         
-        print(">>>>>>>>>>>>>>>>>> 2")
         
         with TimedBlock("Process CSV in Batches"):
-            print(">>>>>>>>>>>>>>>>>> 2.1")
             # เชื่อมต่อกับ collection csv
             csv_collection = await get_collection("csv")
             
-            print(">>>>>>>>>>>>>>>>>> 2.2")
             # ล้างข้อมูลเดิมใน collection ก่อนการบันทึกข้อมูลใหม่
             await csv_collection.delete_many({})
             
@@ -44,13 +41,11 @@ async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.cs
             
             with open(file_path, 'r', encoding='utf-8') as csvfile:
                 # อ่านหัวข้อคอลัมน์
-                print(">>>>>>>>>>>>>>>>>> 2.3")
                 reader = csv.DictReader(csvfile)
                 columns = reader.fieldnames
                 
                 batch = []
                 
-                print(">>>>>>>>>>>>>>>>>> 2.4")
                 # อ่านและประมวลผลข้อมูลทีละแถว
                 for row in reader:
                     batch.append(row)
@@ -58,21 +53,18 @@ async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.cs
                     # เมื่อครบตามขนาด batch ให้บันทึกลง MongoDB
                     if len(batch) >= batch_size:
                         if batch:
-                            print(">>>>>>>>>>>>>>>>>> 2.4.1")
+                            pprint.pp(batch[0])
                             result = await csv_collection.insert_many(batch)
                             total_inserted += len(result.inserted_ids)
-                            print(f"Inserted batch: {total_inserted} records")
-                            print(">>>>>>>>>>>>>>>>>> 2.4.2")
                         batch = []
                 
-                print(">>>>>>>>>>>>>>>>>> 2.5")
                 # บันทึก batch สุดท้ายที่อาจมีขนาดไม่เต็ม batch_size
                 if batch:
+                    pprint.pp(batch[0])
                     result = await csv_collection.insert_many(batch)
                     total_inserted += len(result.inserted_ids)
                     print(f"Inserted final batch: {total_inserted} total records")
         
-        print(">>>>>>>>>>>>>>>>>> 3")
         return {
             "success": True,
             "message": f"✅ บันทึกข้อมูล CSV ลง MongoDB สำเร็จ จำนวน {total_inserted} รายการ",
