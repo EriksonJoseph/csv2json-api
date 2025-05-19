@@ -2,7 +2,6 @@ from pymongo import MongoClient
 from app.config import get_settings
 
 settings = get_settings()
-print("📂 📂 📂 📂 📂 📂 📂 📂 📂 📂 📂 📂 at database py setting")
 
 # ฟังก์ชันสำหรับเชื่อมต่อ MongoDB
 def get_database():
