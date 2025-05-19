@@ -1,17 +1,19 @@
 import pandas as pd
 import os
+import csv
 from typing import Dict, List, Any
 from app.database import get_collection
 from app.utils.advanced_performance import tracker, TimedBlock
 
 @tracker.measure_async_time
-async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.csv") -> Dict[str, Any]:
+async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.csv", batch_size: int = 1000) -> Dict[str, Any]:
     print(f"file_path: {file_path}")
     """
-    อ่านไฟล์ CSV และบันทึกข้อมูลลงใน MongoDB collection "csv"
+    อ่านไฟล์ CSV และบันทึกข้อมูลลงใน MongoDB collection "csv" แบบแบ่งชุด
     
     Args:
         file_path: ที่อยู่ของไฟล์ CSV ที่ต้องการอ่าน
+        batch_size: จำนวนแถวต่อการบันทึกหนึ่งครั้ง
         
     Returns:
         Dictionary ที่ประกอบด้วยผลลัพธ์ของการทำงาน
@@ -26,35 +28,59 @@ async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.cs
             }
         
         print(">>>>>>>>>>>>>>>>>> 2")
-        with TimedBlock("Read CSV File"):
-            # อ่านไฟล์ CSV ด้วย pandas
-            print(">>>>>>>>>>>>>>>>> 2.1")
-            df = pd.read_csv(file_path)
-            
-            print(">>>>>>>>>>>>>>>>> 2.2")
-            # แปลงข้อมูลให้อยู่ในรูปแบบ list of dictionaries
-            records = df.to_dict(orient='records')
-            print(">>>>>>>>>>>>>>>>> 2.3")
         
-        print(">>>>>>>>>>>>>>>>>> 3")
-        with TimedBlock("Save to MongoDB"):
+        with TimedBlock("Process CSV in Batches"):
+            print(">>>>>>>>>>>>>>>>>> 2.1")
             # เชื่อมต่อกับ collection csv
             csv_collection = await get_collection("csv")
             
+            print(">>>>>>>>>>>>>>>>>> 2.2")
             # ล้างข้อมูลเดิมใน collection ก่อนการบันทึกข้อมูลใหม่
             await csv_collection.delete_many({})
             
-            # บันทึกข้อมูลลงใน MongoDB
-            result = await csv_collection.insert_many(records)
+            # ใช้ csv.DictReader อ่านไฟล์แบบ streaming
+            total_inserted = 0
+            columns = []
+            
+            with open(file_path, 'r', encoding='utf-8') as csvfile:
+                # อ่านหัวข้อคอลัมน์
+                print(">>>>>>>>>>>>>>>>>> 2.3")
+                reader = csv.DictReader(csvfile)
+                columns = reader.fieldnames
+                
+                batch = []
+                
+                print(">>>>>>>>>>>>>>>>>> 2.4")
+                # อ่านและประมวลผลข้อมูลทีละแถว
+                for row in reader:
+                    batch.append(row)
+                    
+                    # เมื่อครบตามขนาด batch ให้บันทึกลง MongoDB
+                    if len(batch) >= batch_size:
+                        if batch:
+                            print(">>>>>>>>>>>>>>>>>> 2.4.1")
+                            result = await csv_collection.insert_many(batch)
+                            total_inserted += len(result.inserted_ids)
+                            print(f"Inserted batch: {total_inserted} records")
+                            print(">>>>>>>>>>>>>>>>>> 2.4.2")
+                        batch = []
+                
+                print(">>>>>>>>>>>>>>>>>> 2.5")
+                # บันทึก batch สุดท้ายที่อาจมีขนาดไม่เต็ม batch_size
+                if batch:
+                    result = await csv_collection.insert_many(batch)
+                    total_inserted += len(result.inserted_ids)
+                    print(f"Inserted final batch: {total_inserted} total records")
         
-        print(">>>>>>>>>>>>>>>>>> 4")
+        print(">>>>>>>>>>>>>>>>>> 3")
         return {
             "success": True,
-            "message": f"✅ บันทึกข้อมูล CSV ลง MongoDB สำเร็จ จำนวน {len(result.inserted_ids)} รายการ",
-            "columns": df.columns.tolist(),
-            "total_rows": len(records)
+            "message": f"✅ บันทึกข้อมูล CSV ลง MongoDB สำเร็จ จำนวน {total_inserted} รายการ",
+            "columns": columns,
+            "total_rows": total_inserted
         }
     except Exception as e:
+        print(f"Unexpected error: {str(e)}")
         return {
             "success": False,
             "message": f"❌ เกิดข้อผิดพลาดในการอ่านหรือบันทึกข้อมูล: {str(e)}"
