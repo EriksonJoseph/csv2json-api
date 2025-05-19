@@ -19,17 +19,15 @@ router = APIRouter(
 @router.post("/")
 @tracker.measure_async_time
 async def create_user(user: UserCreate):
-    pprint.pp(user)
-
     # เชื่อมต่อกับ collection users
     users_collection = await get_collection("users")
     
     # ตรวจสอบว่า username ซ้ำหรือไม่
-    existing_user = users_collection.find_one({"username": user.username})
+    existing_user = await users_collection.find_one({"username": user.username})
     if existing_user:
         raise HTTPException(status_code=400, detail="👎 Username นี้มีอยู่ในระบบแล้ว")
     
-    existing_user = users_collection.find_one({"email": user.email})
+    existing_user = await users_collection.find_one({"email": user.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="👎 Email นี้มีอยู่ในระบบแล้ว")
     
@@ -47,10 +45,10 @@ async def create_user(user: UserCreate):
     }
     
     # บันทึกข้อมูลลงใน MongoDB
-    result = users_collection.insert_one(user_data)
+    result = await users_collection.insert_one(user_data)
     
     # ดึงข้อมูลที่บันทึกแล้วกลับมาเพื่อส่งคืน
-    created_user = users_collection.find_one({"_id": result.inserted_id})
+    created_user = await users_collection.find_one({"_id": result.inserted_id})
     
     # แปลงข้อมูลให้อยู่ในรูปแบบที่เหมาะสม
     return {
@@ -61,18 +59,22 @@ async def create_user(user: UserCreate):
 @router.patch("/{user_id}")
 @tracker.measure_async_time
 async def update_user(user_id: str, user_update: UserUpdate):
+    print(">>>>>>>>> 1")
     # เชื่อมต่อกับ collection users
     users_collection = await get_collection("users")
-    
+
+    print(">>>>>>>>> 2")
     # ตรวจสอบความถูกต้องของ ID
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=400, detail="❌ รูปแบบ ID ไม่ถูกต้อง")
     
+    print(">>>>>>>>> 3")
     # ตรวจสอบว่าผู้ใช้มีอยู่หรือไม่
-    existing_user = users_collection.find_one({"_id": ObjectId(user_id)})
+    existing_user = await users_collection.find_one({"_id": ObjectId(user_id)})
     if not existing_user:
         raise HTTPException(status_code=404, detail="🔍 ไม่พบผู้ใช้ที่ต้องการอัปเดต")
     
+    print(">>>>>>>>> 4")
     # สร้าง dict สำหรับเก็บข้อมูลที่จะอัปเดต
     update_data = {}
     
@@ -82,6 +84,7 @@ async def update_user(user_id: str, user_update: UserUpdate):
         if value is not None:
             update_data[field] = value
     
+    print(">>>>>>>>> 5")
     # ถ้ามีการอัปเดต username ให้ตรวจสอบว่าซ้ำหรือไม่
     if "username" in update_data:
         username_check = users_collection.find_one({
@@ -91,15 +94,18 @@ async def update_user(user_id: str, user_update: UserUpdate):
         if username_check:
             raise HTTPException(status_code=400, detail="👎 Username นี้มีอยู่ในระบบแล้ว")
     
+    print(">>>>>>>>> 6")
     # ถ้าไม่มีข้อมูลที่จะอัปเดตให้แจ้งเตือน
     if not update_data:
         raise HTTPException(status_code=400, detail="⚠️ ไม่มีข้อมูลที่จะอัปเดต")
     
+    print(">>>>>>>>> 7")
     # เพิ่ม timestamp สำหรับการอัปเดต
     update_data["updated_at"] = datetime.now()
     
+    print(">>>>>>>>> 8")
     # อัปเดตข้อมูลใน MongoDB
-    result = users_collection.update_one(
+    result = await users_collection.update_one(
         {"_id": ObjectId(user_id)},
         {"$set": update_data}
     )
@@ -113,8 +119,8 @@ async def update_user(user_id: str, user_update: UserUpdate):
         }
     
     # ดึงข้อมูลที่อัปเดตแล้ว
-    updated_user = users_collection.find_one({"_id": ObjectId(user_id)})
-    
+    updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    print(">>>>>>>>> 9")
     # ส่งข้อมูลที่อัปเดตแล้วกลับไป
     return {
         "message": "✅ อัปเดตข้อมูลผู้ใช้สำเร็จ",
@@ -124,20 +130,18 @@ async def update_user(user_id: str, user_update: UserUpdate):
 @router.get("/")
 @tracker.measure_async_time
 async def get_all_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100)):
-  print(">>>>>>>>>>>>>>>>>>>>>>>> 1")
   # เชื่อมต่อกับ collection users
   users_collection = await get_collection("users")
-  print(">>>>>>>>>>>>>>>>>>>>>>>> 2")
   # คำนวณ skip สำหรับ pagination
   skip = (page - 1) * limit
   
   # นับจำนวน users ทั้งหมด (ใช้ await กับ Motor)
   total_users = await users_collection.count_documents({})
-  print(">>>>>>>>>>>>>>>>>>>>>>>> 3")
   
   # ดึงข้อมูลโดยมีการทำ pagiantion
-  users = list_serial(await users_collection.find().skip(skip).limit(limit))
-  print(">>>>>>>>>>>>>>>>>>>>>>>> 4")
+  cursor = users_collection.find().skip(skip).limit(limit)
+  users_list = await cursor.to_list(length=limit)
+  users = list_serial(users_list)
 
   # ส่งคืนข้อมูลพร้อม metadata สำหรับ pagination
   return {
@@ -154,13 +158,15 @@ async def get_all_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1,
 async def get_user(user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการดึงข้อมูล")):
     # เชื่อมต่อกับ collection users
     users_collection = await get_collection("users")
-    
+
     # ตรวจสอบความถูกต้องของ ID
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=400, detail="❌ รูปแบบ ID ไม่ถูกต้อง")
     
     # ดึงข้อมูลผู้ใช้จาก MongoDB
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+
+    pprint.pp(user)
     
     # ตรวจสอบว่าพบผู้ใช้หรือไม่
     if not user:
@@ -183,14 +189,14 @@ async def delete_user(user_id: str = Path(..., description="ID ของผู�
         raise HTTPException(status_code=400, detail="❌ รูปแบบ ID ไม่ถูกต้อง")
     
     # หาข้อมูลผู้ใช้ก่อนลบเพื่อเก็บไว้แสดงผล
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
     
     # ตรวจสอบว่าพบผู้ใช้หรือไม่
     if not user:
         raise HTTPException(status_code=404, detail="🔍 ไม่พบผู้ใช้ที่ต้องการลบ")
     
     # ลบข้อมูลผู้ใช้จาก MongoDB
-    result = users_collection.delete_one({"_id": ObjectId(user_id)})
+    result = await users_collection.delete_one({"_id": ObjectId(user_id)})
     
     # ตรวจสอบว่าลบสำเร็จหรือไม่
     if result.deleted_count == 0:

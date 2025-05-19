@@ -1,1 +1,16 @@
-{}
+{
+  "get_all_users": [
+    {
+      "timestamp": "2025-05-20T00:13:23.169607",
+      "elapsed_time": 0.14711904525756836,
+      "args": null,
+      "kwargs": "{'page': 1, 'limit': 10}"
+    },
+    {
+      "timestamp": "2025-05-20T00:13:23.814763",
+      "elapsed_time": 0.11052203178405762,
+      "args": null,
+      "kwargs": "{'page': 1, 'limit': 10}"
+    }
+  ]
+}
