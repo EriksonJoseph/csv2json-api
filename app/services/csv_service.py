@@ -6,6 +6,7 @@ from app.utils.advanced_performance import tracker, TimedBlock
 
 @tracker.measure_async_time
 async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.csv") -> Dict[str, Any]:
+    print(f"file_path: {file_path}")
     """
     อ่านไฟล์ CSV และบันทึกข้อมูลลงใน MongoDB collection "csv"
     
@@ -16,6 +17,7 @@ async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.cs
         Dictionary ที่ประกอบด้วยผลลัพธ์ของการทำงาน
     """
     try:
+        print(">>>>>>>>>>>>>>>>>> 1")
         # ตรวจสอบว่าไฟล์มีอยู่หรือไม่
         if not os.path.exists(file_path):
             return {
@@ -23,13 +25,18 @@ async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.cs
                 "message": f"❌ ไม่พบไฟล์ CSV ที่ {file_path}"
             }
         
+        print(">>>>>>>>>>>>>>>>>> 2")
         with TimedBlock("Read CSV File"):
             # อ่านไฟล์ CSV ด้วย pandas
+            print(">>>>>>>>>>>>>>>>> 2.1")
             df = pd.read_csv(file_path)
             
+            print(">>>>>>>>>>>>>>>>> 2.2")
             # แปลงข้อมูลให้อยู่ในรูปแบบ list of dictionaries
             records = df.to_dict(orient='records')
+            print(">>>>>>>>>>>>>>>>> 2.3")
         
+        print(">>>>>>>>>>>>>>>>>> 3")
         with TimedBlock("Save to MongoDB"):
             # เชื่อมต่อกับ collection csv
             csv_collection = await get_collection("csv")
@@ -40,6 +47,7 @@ async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.cs
             # บันทึกข้อมูลลงใน MongoDB
             result = await csv_collection.insert_many(records)
         
+        print(">>>>>>>>>>>>>>>>>> 4")
         return {
             "success": True,
             "message": f"✅ บันทึกข้อมูล CSV ลง MongoDB สำเร็จ จำนวน {len(result.inserted_ids)} รายการ",
