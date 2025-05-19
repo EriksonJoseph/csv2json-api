@@ -1,4 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
 from app.config import get_settings
 
 settings = get_settings()

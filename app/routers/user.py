@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Query
 from app.database import get_collection
+from app.schema.schemas import list_serial
 from bson import ObjectId
 from typing import List, Dict, Any
 
@@ -13,6 +14,9 @@ router = APIRouter(
 async def get_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100)):
   # เชื่อมต่อกับ collection users
   users_collection = get_collection("users")
+  
+  # userList = list_serial(users_collection.find())
+  # print(f"userList : ", userList)
   
   # คำนวณ skip สำหรับ pagination
   skip = (page - 1) * limit

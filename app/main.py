@@ -69,7 +69,7 @@ async def startup_event():
     # print("On Start up event")
     # เชื่อมต่อกับ MongoDB
     # print("⚙️⚙️⚙️⚙️  Initializing Database")
-    initialize_db()
+    await initialize_db()
     # print("🎉🎉🎉🎉  Done Initializing Database")
 
 # จัดการ shutdown event
