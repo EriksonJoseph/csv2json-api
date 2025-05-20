@@ -44,8 +44,11 @@ class TaskRepository:
         task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
         if task:
             task["_id"] = str(task["_id"])
-            task["created_file_date"] = task["created_file_date"].strftime("%Y-%m-%d")
-            task["updated_file_date"] = task["updated_file_date"].strftime("%Y-%m-%d")
+            # Handle both string and datetime dates
+            if isinstance(task["created_file_date"], datetime):
+                task["created_file_date"] = task["created_file_date"].strftime("%Y-%m-%d")
+            if isinstance(task["updated_file_date"], datetime):
+                task["updated_file_date"] = task["updated_file_date"].strftime("%Y-%m-%d")
             task["created_at"] = task["created_at"].isoformat()
             task["updated_at"] = task["updated_at"].isoformat()
         
@@ -58,8 +61,8 @@ class TaskRepository:
         if not ObjectId.is_valid(task_id):
             raise ValueError("Invalid task_id format")
             
-        # Update task
-        update_data = {"$set": task_update}
+        # Convert Pydantic model to dictionary and filter out None values
+        update_data = {"$set": {k: v for k, v in task_update.dict().items() if v is not None}}
         result = await tasks_collection.update_one(
             {"_id": ObjectId(task_id)},
             update_data

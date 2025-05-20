@@ -64,6 +64,17 @@ class TaskService:
 
     async def update_task(self, task_id: str, task_update: TaskUpdate) -> dict:
         """Update task"""
+        if task_update.updated_file_date:
+            try:
+                datetime.strptime(task_update.updated_file_date, "%Y-%m-%d")
+            except ValueError:
+                raise TaskException("Invalid date format (must be YYYY-MM-DD)")
+        if task_update.created_file_date:
+            try:
+                datetime.strptime(task_update.created_file_date, "%Y-%m-%d")
+            except ValueError:
+                raise TaskException("Invalid date format (must be YYYY-MM-DD)")
+
         updated_task = await self.task_repository.update_task(task_id, task_update)
         return updated_task
 

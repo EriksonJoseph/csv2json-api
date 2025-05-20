@@ -1,58 +1,110 @@
 import os
 import shutil
 from datetime import datetime
-from app.database import get_collection
 from bson import ObjectId
 from fastapi import UploadFile
-from app.utils.advanced_performance import tracker, TimedBlock
+from app.repositories.file_repository import FileRepository
+from app.exceptions import FileException
 
-@tracker.measure_async_time
-async def save_file_to_temp(file: UploadFile) -> dict:
-    """
-    บันทึกไฟล์ที่อัปโหลดไว้ที่โฟลเดอร์ temp และบันทึกข้อมูลไฟล์ลงใน collection files
-    
-    Args:
-        file: ไฟล์ที่อัปโหลด
-    
-    Returns:
-        ข้อมูลไฟล์ที่บันทึกแล้ว
-    """
-    # สร้างโฟลเดอร์ temp ถ้ายังไม่มี
-    temp_folder = "temp"
-    os.makedirs(temp_folder, exist_ok=True)
-    
-    with TimedBlock("Save File Operation"):
-        # สร้าง filename ใหม่ด้วย timestamp และ original filename
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        file_extension = os.path.splitext(file.filename)[1] # type: ignore
-        new_filename = f"{timestamp}_{file.filename}"
-        file_path = os.path.join(temp_folder, new_filename)
+class FileService:
+    def __init__(self, file_repository: FileRepository):
+        self.file_repository = file_repository
+
+    async def upload_file(self, file: UploadFile) -> dict:
+        """
+        Upload file to temporary storage and save metadata
         
-        # บันทึกไฟล์
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        Args:
+            file: File to upload
         
-        # หาขนาดไฟล์
-        file_size = os.path.getsize(file_path)
+        Returns:
+            File metadata
         
-        # เตรียมข้อมูลสำหรับบันทึกลง MongoDB
-        file_data = {
-            "_id": ObjectId(),
-            "filename": new_filename,
-            "original_filename": file.filename,
-            "file_path": file_path,
-            "file_size": file_size,
-            "mime_type": file.content_type,
-            "file_extension": file_extension,
-            "upload_date": datetime.now(),
-            "metadata": {}
-        }
+        Raises:
+            FileException: If file upload fails
+        """
+        if not file.filename:
+            raise FileException("No file provided", status_code=400)
+
+        try:
+            # Create temp folder if it doesn't exist
+            temp_folder = "temp"
+            os.makedirs(temp_folder, exist_ok=True)
+            
+            # Create new filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            file_extension = os.path.splitext(file.filename)[1]
+            new_filename = f"{timestamp}_{file.filename}"
+            file_path = os.path.join(temp_folder, new_filename)
+            
+            # Save file
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            # Get file size
+            file_size = os.path.getsize(file_path)
+            
+            # Prepare file metadata
+            file_data = {
+                "filename": new_filename,
+                "original_filename": file.filename,
+                "file_path": file_path,
+                "file_size": file_size,
+                "mime_type": file.content_type,
+                "file_extension": file_extension,
+                "upload_date": datetime.now(),
+                "metadata": {}
+            }
+            
+            # Save metadata to database
+            file_id = await self.file_repository.save_file_metadata(file_data)
+            file_data["_id"] = file_id
+            
+            return file_data
+            
+        except Exception as e:
+            raise FileException(f"Failed to upload file: {str(e)}", status_code=500)
+
+    async def get_all_files(self, page: int = 1, limit: int = 10) -> dict:
+        """
+        Get all files with pagination
         
-        # บันทึกข้อมูลลง MongoDB
-        files_collection = await get_collection("files")
-        await files_collection.insert_one(file_data)
+        Args:
+            page: Page number (default: 1)
+            limit: Number of items per page (default: 10)
         
-        # แปลง ObjectId เป็น string เพื่อส่งกลับ
-        file_data["_id"] = str(file_data["_id"])
+        Returns:
+            Dictionary containing files list and pagination info
+        """
+        try:
+            return await self.file_repository.get_all_files(page, limit)
+        except Exception as e:
+            raise FileException(f"Failed to retrieve files: {str(e)}", status_code=500)
+
+    async def download_file(self, file_id: str) -> dict:
+        """
+        Download file by ID
         
-        return file_data
+        Args:
+            file_id: ID of the file to download
+        
+        Returns:
+            File metadata and path
+        
+        Raises:
+            FileException: If file not found or download fails
+        """
+        try:
+            # Get file metadata from repository
+            file_data = await self.file_repository.get_file_by_id(file_id)
+            if not file_data:
+                raise FileException("File not found", status_code=404)
+
+            # Check if file exists on disk
+            if not os.path.exists(file_data["file_path"]):
+                raise FileException("File not found on disk", status_code=404)
+
+            return file_data
+            
+        except Exception as e:
+            raise FileException(f"Failed to download file: {str(e)}", status_code=500)
