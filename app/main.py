@@ -5,8 +5,8 @@ import os
 import time
 
 from app.config import get_settings
-from app.database import initialize_db
-from app.routers import router
+from app.repositories.base_repository import BaseRepository
+from app.api.routes import router
 from app.utils.advanced_performance import tracker  # นำเข้า tracker
 
 # เรียกใช้งาน settings
@@ -15,7 +15,7 @@ settings = get_settings()
 # สร้าง FastAPI application
 app = FastAPI(
     title=settings.APP_NAME,
-    description="RESTful API for CSV2JSON",
+    description="RESTful API for CSV2JSON with Clean Architecture",
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -61,8 +61,12 @@ async def root():
 # จัดการ startup event
 @app.on_event("startup")
 async def startup_event():
-    # เชื่อมต่อกับ MongoDB
-    await initialize_db()
+    # สร้างโฟลเดอร์ที่จำเป็น
+    os.makedirs("logs", exist_ok=True)
+    os.makedirs("temp", exist_ok=True)
+    
+    # ทำงานอื่นๆ ที่จำเป็นเมื่อ start app
+    pass
 
 # จัดการ shutdown event
 @app.on_event("shutdown")
