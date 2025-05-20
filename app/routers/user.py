@@ -58,22 +58,18 @@ async def create_user(user: UserCreate):
 @router.patch("/{user_id}")
 @tracker.measure_async_time
 async def update_user(user_id: str, user_update: UserUpdate):
-    print(">>>>>>>>> 1")
     # เชื่อมต่อกับ collection users
     users_collection = await get_collection("users")
 
-    print(">>>>>>>>> 2")
     # ตรวจสอบความถูกต้องของ ID
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=400, detail="❌ รูปแบบ ID ไม่ถูกต้อง")
     
-    print(">>>>>>>>> 3")
     # ตรวจสอบว่าผู้ใช้มีอยู่หรือไม่
     existing_user = await users_collection.find_one({"_id": ObjectId(user_id)})
     if not existing_user:
         raise HTTPException(status_code=404, detail="🔍 ไม่พบผู้ใช้ที่ต้องการอัปเดต")
     
-    print(">>>>>>>>> 4")
     # สร้าง dict สำหรับเก็บข้อมูลที่จะอัปเดต
     update_data = {}
     
@@ -83,7 +79,6 @@ async def update_user(user_id: str, user_update: UserUpdate):
         if value is not None:
             update_data[field] = value
     
-    print(">>>>>>>>> 5")
     # ถ้ามีการอัปเดต username ให้ตรวจสอบว่าซ้ำหรือไม่
     if "username" in update_data:
         username_check = users_collection.find_one({
@@ -93,16 +88,13 @@ async def update_user(user_id: str, user_update: UserUpdate):
         if username_check:
             raise HTTPException(status_code=400, detail="👎 Username นี้มีอยู่ในระบบแล้ว")
     
-    print(">>>>>>>>> 6")
     # ถ้าไม่มีข้อมูลที่จะอัปเดตให้แจ้งเตือน
     if not update_data:
         raise HTTPException(status_code=400, detail="⚠️ ไม่มีข้อมูลที่จะอัปเดต")
     
-    print(">>>>>>>>> 7")
     # เพิ่ม timestamp สำหรับการอัปเดต
     update_data["updated_at"] = datetime.now()
     
-    print(">>>>>>>>> 8")
     # อัปเดตข้อมูลใน MongoDB
     result = await users_collection.update_one(
         {"_id": ObjectId(user_id)},
@@ -119,7 +111,6 @@ async def update_user(user_id: str, user_update: UserUpdate):
     
     # ดึงข้อมูลที่อัปเดตแล้ว
     updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
-    print(">>>>>>>>> 9")
     # ส่งข้อมูลที่อัปเดตแล้วกลับไป
     return {
         "message": "✅ อัปเดตข้อมูลผู้ใช้สำเร็จ",
