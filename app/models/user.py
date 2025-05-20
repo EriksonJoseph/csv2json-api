@@ -8,7 +8,6 @@ class User(BaseModel):
   middle_name: str
   email: str
 
-# เพิ่ม model สำหรับการสร้างผู้ใช้ใหม่
 class UserCreate(BaseModel):
     username: str
     password: str
@@ -17,7 +16,6 @@ class UserCreate(BaseModel):
     last_name: str = ""
     middle_name: str = ""
 
-# เพิ่ม model สำหรับการอัปเดตผู้ใช้ (ทุกฟิลด์เป็น Optional)
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     first_name: Optional[str] = None

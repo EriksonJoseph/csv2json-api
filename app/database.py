@@ -36,6 +36,10 @@ async def initialize_db():
         # สร้างดัชนีสำหรับคอลเลกชัน users
         await db.users.create_index("username", unique=True)
         await db.users.create_index("email", unique=True)
+        
+        # สร้างดัชนีสำหรับคอลเลกชัน files
+        await db.files.create_index("filename", unique=True)
+        await db.files.create_index("upload_date")
 
         print(f"✅ เชื่อมต่อ MongoDB สำเร็จ: {settings.MONGODB_URI}")
         return True
