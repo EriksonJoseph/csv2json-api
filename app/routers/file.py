@@ -30,9 +30,25 @@ async def get_all_files(page: int = Query(1, ge=1), limit: int = Query(10, ge=1,
     """
     return await file_service.get_all_files(page, limit)
 
+@router.get("/{file_id}")
+@tracker.measure_async_time
+async def get_file(file_id: str):
+    """
+    📝 ดึงข้อมูลไฟล์ตาม ID
+    """
+    return await file_service.get_file_by_id(file_id)
+
+@router.delete("/{file_id}")
+@tracker.measure_async_time
+async def delete_file(file_id: str):
+    """
+    🗑️ ลบไฟล์ตาม ID
+    """
+    return await file_service.delete_file(file_id)
+
 @router.get("/download/{file_id}")
 @tracker.measure_async_time
-async def download_file(file_id: str):
+async def download_file(file_id: str) -> FileResponse:
     """
     ⬇️ ดาวน์โหลดไฟล์ตาม ID
     """

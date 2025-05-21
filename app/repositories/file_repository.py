@@ -37,3 +37,11 @@ class FileRepository:
             "page": page,
             "limit": limit
         }
+
+    async def delete_file_by_id(self, file_id: str) -> None:
+        """Delete file by ID from database"""
+        if not ObjectId.is_valid(file_id):
+            raise ValueError("Invalid file_id format")
+
+        files_collection = await get_collection("files")
+        await files_collection.delete_one({"_id": ObjectId(file_id)})
