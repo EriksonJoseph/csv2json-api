@@ -30,7 +30,6 @@ async def get_collection(collection_name: str):
 # เชื่อมต่อ MongoDB และเตรียม collection สำหรับ Entity
 async def initialize_db():
     try:
-        print(f"MongoDB URI: {settings.MONGODB_URI}")
         client = AsyncIOMotorClient(settings.MONGODB_URI)
         db = client[settings.MONGODB_DB]
 

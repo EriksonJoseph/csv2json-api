@@ -120,19 +120,16 @@ def read_csv_file(file_path: str) -> pd.DataFrame:
         DataFrame containing the CSV data
     """
     try:
-        # Try to detect encoding automatically
-        df = pd.read_csv(file_path, encoding='utf-8', low_memory=False)
+        # Try to read with semicolon delimiter first
+        df = pd.read_csv(file_path, delimiter=';', encoding='utf-8-sig')
         return df
-    except UnicodeDecodeError:
-        # Try with different encodings if utf-8 fails
+    except Exception as e:
+        logger.error(f"Error reading with semicolon delimiter: {str(e)}")
+        
+        # Try to read with comma delimiter
         try:
-            df = pd.read_csv(file_path, encoding='latin1')
+            df = pd.read_csv(file_path, delimiter=',', encoding='utf-8-sig')
             return df
-        except:
-            # Try with encoding detection
-            import chardet
-            with open(file_path, 'rb') as f:
-                result = chardet.detect(f.read())
-            
-            df = pd.read_csv(file_path, encoding=result['encoding'])
-            return df
+        except Exception as e:
+            logger.error(f"Error reading with comma delimiter: {str(e)}")
+            raise Exception(f"Failed to read CSV file {file_path}: {str(e)}")
