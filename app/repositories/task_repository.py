@@ -94,7 +94,8 @@ class TaskRepository:
         return list_serial(tasks)
     
     async def update_task_status(self, task_id: str, is_done_created_doc: bool, 
-                             column_names: List[str], error_message: Optional[str]) -> None:
+                             column_names: List[str], error_message: Optional[str],
+                             processing_time: Optional[float] = None) -> None:
         """Update task status after processing"""
         if not ObjectId.is_valid(task_id):
             raise ValueError("Invalid task_id format")
@@ -109,7 +110,9 @@ class TaskRepository:
         
         if error_message is not None:
             update_data["error_message"] = error_message
-            
+        if processing_time is not None:
+            update_data["processing_time"] = processing_time
+        
         await tasks_collection.update_one(
             {"_id": ObjectId(task_id)},
             {"$set": update_data}

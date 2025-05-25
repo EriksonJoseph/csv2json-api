@@ -4,6 +4,7 @@ from app.repositories.task_repository import TaskRepository
 from app.repositories.file_repository import FileRepository
 from app.models.task import TaskCreate, TaskUpdate
 from app.utils.advanced_performance import tracker
+from app.workers.background_worker import get_current_processing_task
 
 router = APIRouter(
     prefix="/task",
@@ -15,6 +16,14 @@ router = APIRouter(
 task_repository = TaskRepository()
 file_repository = FileRepository()
 task_service = TaskService(task_repository, file_repository)
+
+@router.get("/current-processing")
+@tracker.measure_async_time
+async def get_current_task_processing():
+    """
+    🔄 ดูงานที่กำลังถูกประมวลผลอยู่
+    """
+    return await get_current_processing_task()
 
 @router.post("/")
 @tracker.measure_async_time

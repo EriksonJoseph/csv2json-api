@@ -18,3 +18,4 @@ class TaskUpdate(BaseModel):
     is_done_created_doc: Optional[bool] = None
     column_names: Optional[List[str]] = None
     error_message: Optional[str] = None
+    processing_time: Optional[float] = None

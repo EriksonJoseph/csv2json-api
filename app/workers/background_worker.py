@@ -24,6 +24,23 @@ logger = logging.getLogger("background_worker")
 task_queue = asyncio.Queue()
 is_worker_running = False
 
+# Global variable to track current task
+_current_task = None
+
+async def get_current_processing_task() -> Optional[dict]:
+    """
+    Get the current task being processed by the worker
+    Returns:
+        dict: Current task information if processing, None otherwise
+    """
+    print("get_current_processing_task has been called")
+    if _current_task is None:
+        return None
+    
+    task_repo = TaskRepository()
+    # task = await task_repo.get_task_by_id(_current_task)
+    return None
+
 async def process_csv_task(task_id: str, file_id: str):
     """
     Process a CSV file and insert data into MongoDB
@@ -32,6 +49,9 @@ async def process_csv_task(task_id: str, file_id: str):
         task_id: ID of the task
         file_id: ID of the file to process
     """
+    global _current_task
+    _current_task = task_id
+    start_time = datetime.now()
     logger.info(f"Processing task {task_id} with file {file_id}")
     
     task_repo = TaskRepository()
@@ -68,28 +88,42 @@ async def process_csv_task(task_id: str, file_id: str):
         if records:
             await csv_collection.insert_many(records)
         
-        # Update task with column names and mark as completed
+        # Calculate processing time
+        end_time = datetime.now()
+        execution_time = (end_time - start_time).total_seconds()
+        
+        # Update task with column names, processing time, and mark as completed
         await task_repo.update_task_status(
             task_id=task_id,
             is_done_created_doc=True,
             column_names=column_names,
-            error_message=None
+            error_message=None,
+            processing_time=execution_time
         )
         
         # Delete file from disk
         os.remove(file_path)
-        logger.info(f"Successfully processed task {task_id} with {len(records)} records")
+        end_time = datetime.now()
+        execution_time = (end_time - start_time).total_seconds()
+        logger.info(f"Successfully processed task {task_id} with {len(records)} records in {execution_time:.2f} seconds")
         
     except Exception as e:
         error_message = str(e)
-        logger.error(f"Error processing task {task_id}: {error_message}")
+        end_time = datetime.now()
+        execution_time = (end_time - start_time).total_seconds()
+        logger.error(f"Error processing task {task_id} in {execution_time:.2f} seconds: {error_message}")
         
-        # Update task with error
+        # Calculate processing time
+        end_time = datetime.now()
+        execution_time = (end_time - start_time).total_seconds()
+        
+        # Update task with error and processing time
         await task_repo.update_task_status(
             task_id=task_id,
             is_done_created_doc=True,
             column_names=[],
-            error_message=error_message
+            error_message=error_message,
+            processing_time=execution_time
         )
         
         # Attempt to clean up file (best effort)
@@ -120,6 +154,8 @@ async def worker_loop():
             except Exception as e:
                 logger.error(f"Uncaught error in worker: {str(e)}")
             finally:
+                # Clear current task
+                _current_task = None
                 # Mark task as done in the queue
                 task_queue.task_done()
     except asyncio.CancelledError:
