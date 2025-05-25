@@ -1,6 +1,20 @@
 from pymongo import MongoClient
 from app.config import get_settings
 from motor.motor_asyncio import AsyncIOMotorClient
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("logs/worker.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("background_worker")
+
+
 
 # สร้างตัวแปร global เพื่อเก็บ client ไว้ใช้งานต่อ
 _client = None
@@ -41,8 +55,8 @@ async def initialize_db():
         await db.files.create_index("filename", unique=True)
         await db.files.create_index("upload_date")
 
-        print(f"✅ เชื่อมต่อ MongoDB สำเร็จ: {settings.MONGODB_URI}")
+        logger.info(f"✅ เชื่อมต่อ MongoDB สำเร็จ: {settings.MONGODB_URI}")
         return True
     except Exception as e:
-        print(f"❌ เกิดข้อผิดพลาดในการเชื่อมต่อ MongoDB: {str(e)}")
+        logger.error(f"❌ เกิดข้อผิดพลาดในการเชื่อมต่อ MongoDB: {str(e)}")
         return False

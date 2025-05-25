@@ -4,12 +4,15 @@ from bson import ObjectId
 from app.repositories.user_repository import UserRepository
 from app.models.user import UserCreate, UserUpdate
 from app.exceptions import UserException
+from app.services.base_service import BaseService
+from app.models.auth import TokenData
 
-class UserService:
+class UserService(BaseService):
     def __init__(self, user_repository: UserRepository):
+        super().__init__(user_repository)
         self.user_repository = user_repository
 
-    async def create_user(self, user: UserCreate) -> Dict:
+    async def create_user(self, user: UserCreate, current_user: Optional[TokenData] = None) -> Dict:
         """Create a new user"""
         # Check for duplicate username
         if await self.user_repository.get_user_by_username(user.username):
@@ -27,16 +30,13 @@ class UserService:
             "first_name": user.first_name,
             "last_name": user.last_name,
             "middle_name": user.middle_name,
-            "created_at": datetime.now(),
-            "updated_at": datetime.now()
+            "roles": user.roles if hasattr(user, 'roles') else ["user"]  # ใช้ roles ที่มีหรือ default เป็น ["user"]
         }
 
-        # Create user
-        user_id = await self.user_repository.create_user(user_data)
-        created_user = await self.user_repository.get_user_by_id(user_id)
-        return created_user
+        # Create user with audit fields
+        return await self.create(user_data, current_user)
 
-    async def update_user(self, user_id: str, user_update: UserUpdate) -> Dict:
+    async def update_user(self, user_id: str, user_update: UserUpdate, current_user: Optional[TokenData] = None) -> Dict:
         """Update user information"""
         # Validate user_id
         if not ObjectId.is_valid(user_id):
@@ -57,9 +57,8 @@ class UserService:
                 if existing_username and str(existing_username["_id"]) != user_id:
                     raise UserException("Username already exists", status_code=400)
 
-        # Add updated timestamp
-        update_data["updated_at"] = datetime.now()
-
+        # Update user with audit fields
+        return await self.update(user_id, update_data, current_user)
         # Update user
         updated_user = await self.user_repository.update_user(user_id, update_data)
         return updated_user

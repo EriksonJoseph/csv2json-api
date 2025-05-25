@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     MONGODB_URI: str = "mongodb://localhost:27017"
     MONGODB_DB: str = "csv2json"
     
+    # JWT settings
+    JWT_SECRET_KEY: str = "fallback-secret-key"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
+    
     class Config:
         env_file = ".env"  # อ่านค่าจากไฟล์ .env
         env_file_encoding = "utf-8"

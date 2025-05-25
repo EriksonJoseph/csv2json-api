@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Query, Path
+from fastapi import APIRouter, Query, Path, Depends
 from app.services.user_service import UserService
 from app.repositories.user_repository import UserRepository
 from app.models.user import UserCreate, UserUpdate
 from app.utils.advanced_performance import tracker
+from app.dependencies.auth import require_admin, require_user, get_current_user
 
 router = APIRouter(
     prefix="/user",
@@ -16,95 +17,66 @@ user_service = UserService(user_repository)
 
 @router.post("/")
 @tracker.measure_async_time
-async def create_user(user: UserCreate):
+async def create_user(user: UserCreate, current_user = Depends(require_admin)):
     """
-    📋 สร้างผู้ใช้ใหม่
+    📋 สร้างผู้ใช้ใหม่ (เฉพาะ Admin)
     """
-    return await user_service.create_user(user)
+    return await user_service.create_user(user, current_user)
 
 @router.patch("/{user_id}")
 @tracker.measure_async_time
-async def update_user(user_id: str, user_update: UserUpdate):
+async def update_user(user_id: str, user_update: UserUpdate, current_user = Depends(require_admin)):
     """
-    🔄 อัปเดตข้อมูลผู้ใช้
+    อัปเดตข้อมูลผู้ใช้ (เฉพาะ Admin)
     """
-    return await user_service.update_user(user_id, user_update)
+    return await user_service.update_user(user_id, user_update, current_user)
 
 @router.get("/{user_id}")
 @tracker.measure_async_time
-async def get_user(user_id: str):
+async def get_user(
+    user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการดึงข้อมูล"),
+    current_user = Depends(require_user)
+):
     """
-    📋 ดึงข้อมูลผู้ใช้ตาม ID
+    ดึงข้อมูลผู้ใช้ตาม ID
     """
+    # Users can only view their own data, admins can view all
+    if current_user.user_id != user_id and "admin" not in current_user.roles:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     return await user_service.get_user(user_id)
 
 @router.get("/")
 @tracker.measure_async_time
-async def get_all_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100)):
+async def get_all_users(
+    page: int = Query(1, ge=1), 
+    limit: int = Query(10, ge=1, le=100),
+    current_user = Depends(require_user)
+):
     """
-    📋 ดึงรายการผู้ใช้ทั้งหมด
+    ดึงรายการผู้ใช้
+    - Admin: ดูได้ทุกคน
+    - User: ดูได้เฉพาะตัวเอง
     """
-    return await user_service.get_all_users(page, limit)
-async def get_all_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100)):
-  # เชื่อมต่อกับ collection users
-  users_collection = await get_collection("users")
-  # คำนวณ skip สำหรับ pagination
-  skip = (page - 1) * limit
-  
-  # นับจำนวน users ทั้งหมด (ใช้ await กับ Motor)
-  total_users = await users_collection.count_documents({})
-  
-  # ดึงข้อมูลโดยมีการทำ pagiantion
-  cursor = users_collection.find().skip(skip).limit(limit)
-  users_list = await cursor.to_list(length=limit)
-  users = list_serial(users_list)
-
-  # ส่งคืนข้อมูลพร้อม metadata สำหรับ pagination
-  return {
-    "message": "👤 รายชื่อผู้ใช้ทั้งหมด",
-    "total": total_users,
-    "page": page,
-    "limit": limit,
-    "pages": (total_users + limit - 1) // limit,
-    "users": users
-  }
-
-@router.get("/{user_id}")
-@tracker.measure_async_time
-async def get_user(user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการดึงข้อมูล")):
-    # เชื่อมต่อกับ collection users
-    users_collection = await get_collection("users")
-
-    # ตรวจสอบความถูกต้องของ ID
-    if not ObjectId.is_valid(user_id):
-        raise HTTPException(status_code=400, detail="❌ รูปแบบ ID ไม่ถูกต้อง")
-    
-    # ดึงข้อมูลผู้ใช้จาก MongoDB
-    user = await users_collection.find_one({"_id": ObjectId(user_id)})
-
-    pprint.pp(user)
-    
-    # ตรวจสอบว่าพบผู้ใช้หรือไม่
-    if not user:
-        raise HTTPException(status_code=404, detail="🔍 ไม่พบผู้ใช้ที่ต้องการ")
-    
-    # แปลงข้อมูลให้อยู่ในรูปแบบที่เหมาะสมและส่งกลับ
-    return {
-        "message": "👤 ข้อมูลผู้ใช้",
-        "user": individual_serial(user)
-    }
+    if "admin" in current_user.roles:
+        return await user_service.get_all_users(page, limit)
+    else:
+        # Users can only view their own data
+        user = await user_service.get_user(current_user.user_id)
+        if user:
+            return {
+                "message": "👤 ข้อมูลผู้ใช้",
+                "users": [user]
+            }
+        raise HTTPException(status_code=404, detail="User not found")
 
 @router.delete("/{user_id}")
 @tracker.measure_async_time
-async def delete_user(user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการลบ")):
-    # เชื่อมต่อกับ collection users
-    users_collection = await get_collection("users")
-    
-    # ตรวจสอบความถูกต้องของ ID
-    if not ObjectId.is_valid(user_id):
-        raise HTTPException(status_code=400, detail="❌ รูปแบบ ID ไม่ถูกต้อง")
-    
-    # หาข้อมูลผู้ใช้ก่อนลบเพื่อเก็บไว้แสดงผล
+async def delete_user(user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการลบ"), current_user = Depends(require_admin)):
+    """
+    ลบผู้ใช้ (เฉพาะ Admin)
+    """
+    return await user_service.delete_user(user_id)
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
     
     # ตรวจสอบว่าพบผู้ใช้หรือไม่
