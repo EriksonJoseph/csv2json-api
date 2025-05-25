@@ -1,5 +1,6 @@
 from pydantic import BaseSettings
 from functools import lru_cache
+import os
 
 class Settings(BaseSettings):
     # ตั้งค่าพื้นฐาน
@@ -18,4 +19,7 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings():
+    # ตรวจสอบและรีโหลด settings ถ้ามีการเปลี่ยนแปลงในไฟล์ .env
+    if os.path.exists(".env"):
+        os.environ.pop("MONGODB_URI", None)  # ลบค่าเก่า
     return Settings()

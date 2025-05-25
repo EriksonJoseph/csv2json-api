@@ -121,7 +121,7 @@ def read_csv_file(file_path: str) -> pd.DataFrame:
     """
     try:
         # Try to detect encoding automatically
-        df = pd.read_csv(file_path, encoding='utf-8')
+        df = pd.read_csv(file_path, encoding='utf-8', low_memory=False)
         return df
     except UnicodeDecodeError:
         # Try with different encodings if utf-8 fails

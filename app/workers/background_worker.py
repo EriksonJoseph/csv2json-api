@@ -29,17 +29,19 @@ _current_task = None
 
 async def get_current_processing_task() -> Optional[dict]:
     """
-    Get the current task being processed by the worker
+    Get current processing task information
+    
     Returns:
         dict: Current task information if processing, None otherwise
     """
-    print("get_current_processing_task has been called")
     if _current_task is None:
         return None
     
-    task_repo = TaskRepository()
-    # task = await task_repo.get_task_by_id(_current_task)
-    return None
+    # Return just the task ID since we don't need the full task details
+    return {
+        "task_id": _current_task,
+        "status": "processing"
+    }
 
 async def process_csv_task(task_id: str, file_id: str):
     """
@@ -78,15 +80,23 @@ async def process_csv_task(task_id: str, file_id: str):
         
         # Convert DataFrame to list of dictionaries for MongoDB insertion
         records = df.to_dict("records")
-
+        print(f"records: {len(records)}")
+        
         # Add metadata to each record
         for record in records:
             record["task_id"] = task_id
             record["processed_at"] = datetime.now()
         
-        # Insert records into MongoDB
+        # Insert records in batches to avoid overwhelming MongoDB
         if records:
-            await csv_collection.insert_many(records)
+            BATCH_SIZE = 1000  # ปรับขนาด batch ตามที่ต้องการ
+            total_records = len(records)
+            for i in range(0, total_records, BATCH_SIZE):
+                batch = records[i:i + BATCH_SIZE]
+                await csv_collection.insert_many(batch)
+                logger.info(f"Inserted batch {i//BATCH_SIZE + 1}/{(total_records + BATCH_SIZE - 1)//BATCH_SIZE}")
+                # อาจเพิ่ม delay ระหว่าง batches ถ้าต้องการให้ช้าลง
+                # await asyncio.sleep(0.1)
         
         # Calculate processing time
         end_time = datetime.now()
