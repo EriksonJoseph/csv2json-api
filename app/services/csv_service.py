@@ -108,3 +108,31 @@ async def clear_csv_collection() -> Dict[str, Any]:
             "success": False,
             "message": f"❌ เกิดข้อผิดพลาดในการล้างข้อมูล: {str(e)}"
         }
+
+def read_csv_file(file_path: str) -> pd.DataFrame:
+    """
+    Read a CSV file and return a pandas DataFrame
+    
+    Args:
+        file_path: Path to the CSV file
+        
+    Returns:
+        DataFrame containing the CSV data
+    """
+    try:
+        # Try to detect encoding automatically
+        df = pd.read_csv(file_path, encoding='utf-8')
+        return df
+    except UnicodeDecodeError:
+        # Try with different encodings if utf-8 fails
+        try:
+            df = pd.read_csv(file_path, encoding='latin1')
+            return df
+        except:
+            # Try with encoding detection
+            import chardet
+            with open(file_path, 'rb') as f:
+                result = chardet.detect(f.read())
+            
+            df = pd.read_csv(file_path, encoding=result['encoding'])
+            return df

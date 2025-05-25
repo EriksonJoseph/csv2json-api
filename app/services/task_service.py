@@ -128,3 +128,41 @@ class TaskService:
     async def delete_task(self, task_id: str) -> bool:
         """Delete task"""
         return await self.task_repository.delete_task(task_id)
+
+    async def create_task(self, task: TaskCreate) -> dict:
+        # Optimize date parsing using ThreadPoolExecutor
+        async def parse_dates():
+            return await asyncio.get_event_loop().run_in_executor(
+                thread_pool,
+                lambda: (
+                    datetime.strptime(task.created_file_date, "%Y-%m-%d"),
+                    datetime.strptime(task.updated_file_date, "%Y-%m-%d")
+                )
+            )
+
+        # Parse dates
+        created_file_date, updated_file_date = await parse_dates()
+
+        # Prepare task data
+        task_data = {
+            "topic": task.topic,
+            "created_file_date": created_file_date,
+            "updated_file_date": updated_file_date,
+            "references": task.references,
+            "file_id": task.file_id,
+            "is_done_created_doc": False,
+            "column_names": [],
+            "error_message": None,
+            "created_at": datetime.now(),
+            "updated_at": datetime.now()
+        }
+
+        # Create task
+        task_id = await self.task_repository.create_task(task_data)
+        created_task = await self.task_repository.get_task_by_id(task_id)
+        
+        # Add task to processing queue
+        from app.workers.background_worker import add_task_to_queue
+        await add_task_to_queue(str(task_id), task.file_id)
+        
+        return created_task

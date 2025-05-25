@@ -1,7 +1,8 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 from datetime import datetime
 from bson import ObjectId
 from app.database import get_collection
+from app.utils.serializers import list_serial
 
 class TaskRepository:
     async def create_task(self, task_data: dict) -> str:
@@ -84,3 +85,32 @@ class TaskRepository:
             
         result = await tasks_collection.delete_one({"_id": ObjectId(task_id)})
         return result.deleted_count > 0
+
+    async def get_pending_tasks(self) -> List[Dict]:
+        """Get all pending tasks (is_done_created_doc=False)"""
+        tasks_collection = await get_collection("tasks")
+        cursor = tasks_collection.find({"is_done_created_doc": False})
+        tasks = await cursor.to_list(length=100)  # Limit to 100 pending tasks
+        return list_serial(tasks)
+    
+    async def update_task_status(self, task_id: str, is_done_created_doc: bool, 
+                             column_names: List[str], error_message: Optional[str]) -> None:
+        """Update task status after processing"""
+        if not ObjectId.is_valid(task_id):
+            raise ValueError("Invalid task_id format")
+            
+        tasks_collection = await get_collection("tasks")
+        
+        update_data = {
+            "is_done_created_doc": is_done_created_doc,
+            "column_names": column_names,
+            "updated_at": datetime.now()
+        }
+        
+        if error_message is not None:
+            update_data["error_message"] = error_message
+            
+        await tasks_collection.update_one(
+            {"_id": ObjectId(task_id)},
+            {"$set": update_data}
+        )

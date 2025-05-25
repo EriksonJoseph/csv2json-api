@@ -7,7 +7,8 @@ import time
 from app.config import get_settings
 from app.database import initialize_db
 from app.routers import router
-from app.utils.advanced_performance import tracker  # นำเข้า tracker
+from app.utils.advanced_performance import tracker
+from app.workers.background_worker import start_worker, load_pending_tasks
 
 # เรียกใช้งาน settings
 settings = get_settings()
@@ -63,6 +64,12 @@ async def root():
 async def startup_event():
     # เชื่อมต่อกับ MongoDB
     await initialize_db()
+
+    # Start background worker
+    await start_worker()
+    
+    # Load pending tasks
+    await load_pending_tasks()
 
 # จัดการ shutdown event
 @app.on_event("shutdown")
