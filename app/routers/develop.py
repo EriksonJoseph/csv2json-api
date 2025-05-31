@@ -10,8 +10,8 @@ router = APIRouter(
 )
 
 @router.get("/")
-@tracker.measure_time
-def health(current_user = Depends(require_admin)):
+@tracker.measure_async_time
+async def health(current_user = Depends(require_admin)):
   """
   🏠 ตรวจสอบว่าสามารถเรียก API ได้หรือไม่
   """
