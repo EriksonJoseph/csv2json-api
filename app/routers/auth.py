@@ -6,7 +6,7 @@ from app.utils.advanced_performance import tracker
 from typing import Dict
 
 router = APIRouter(
-    prefix="/api/auth",
+    prefix="/auth",
     tags=["authentication"]
 )
 

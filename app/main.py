@@ -43,7 +43,6 @@ async def add_process_time_header(request: Request, call_next):
 
 # เพิ่ม router หลัก
 app.include_router(router, prefix="/api")
-app.include_router(auth.router, prefix="/api/auth")
 
 # สร้าง route สำหรับดู performance statistics
 @app.get("/api/performance")
