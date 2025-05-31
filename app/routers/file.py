@@ -1,8 +1,9 @@
-from fastapi import APIRouter, UploadFile, File, Query
+from fastapi import APIRouter, UploadFile, File, Query, Depends
 from fastapi.responses import FileResponse
 from app.services.file_service import FileService
 from app.repositories.file_repository import FileRepository
 from app.utils.advanced_performance import tracker
+from app.dependencies.auth import require_user
 
 router = APIRouter(
     prefix="/files",
@@ -16,7 +17,7 @@ file_service = FileService(file_repository)
 
 @router.post("/upload")
 @tracker.measure_async_time
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), current_user = Depends(require_user)):
     """
     🚀 อัปโหลดไฟล์และบันทึกลงโฟลเดอร์ temp พร้อมบันทึกข้อมูลลง collection files
     """
@@ -24,7 +25,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 @router.get("/")
 @tracker.measure_async_time
-async def get_all_files(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100)):
+async def get_all_files(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100), current_user = Depends(require_user)):
     """
     📋 ดึงรายการไฟล์ทั้งหมด
     """
@@ -32,7 +33,7 @@ async def get_all_files(page: int = Query(1, ge=1), limit: int = Query(10, ge=1,
 
 @router.get("/{file_id}")
 @tracker.measure_async_time
-async def get_file(file_id: str):
+async def get_file(file_id: str, current_user = Depends(require_user)):
     """
     📝 ดึงข้อมูลไฟล์ตาม ID
     """
@@ -40,7 +41,7 @@ async def get_file(file_id: str):
 
 @router.delete("/{file_id}")
 @tracker.measure_async_time
-async def delete_file(file_id: str):
+async def delete_file(file_id: str, current_user = Depends(require_user)):
     """
     🗑️ ลบไฟล์ตาม ID
     """
@@ -48,7 +49,7 @@ async def delete_file(file_id: str):
 
 @router.get("/download/{file_id}")
 @tracker.measure_async_time
-async def download_file(file_id: str) -> FileResponse:
+async def download_file(file_id: str, current_user = Depends(require_user)) -> FileResponse:
     """
     ⬇️ ดาวน์โหลดไฟล์ตาม ID
     """

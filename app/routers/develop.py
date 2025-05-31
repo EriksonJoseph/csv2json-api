@@ -9,13 +9,13 @@ router = APIRouter(
   responses={404: { "description": "Not Found"}}
 )
 
-@router.get("/")
+@router.get("/", response_model=str)
 @tracker.measure_async_time
 async def health(current_user = Depends(require_admin)):
   """
   🏠 ตรวจสอบว่าสามารถเรียก API ได้หรือไม่
   """
-  return {"status": "ok"}
+  return "OK"
 
 @router.get("/read_and_save")
 @tracker.measure_async_time
