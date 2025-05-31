@@ -3,10 +3,10 @@ import pandas as pd
 import os
 from datetime import datetime
 from typing import List, Dict, Optional, Any
-from app.repositories.task_repository import TaskRepository
-from app.repositories.file_repository import FileRepository
+from app.routers.task.task_repository import TaskRepository
+from app.routers.file.file_repository import FileRepository
 from app.database import get_collection
-from app.services.csv_service import read_csv_file
+from app.dependencies.file import read_csv_file
 import logging
 
 # Configure logging

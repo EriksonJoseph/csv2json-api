@@ -1,10 +1,38 @@
+
 import pandas as pd
-import os
-import csv
-from typing import Dict, List, Any
-from app.database import get_collection
+import logging
 from app.utils.advanced_performance import tracker, TimedBlock
+from typing import Dict, Any
 import pprint
+import os
+
+logger = logging.getLogger("file")
+
+def read_csv_file(file_path: str) -> pd.DataFrame:
+    """
+    Read a CSV file and return a pandas DataFrame
+    
+    Args:
+        file_path: Path to the CSV file
+    
+    Returns:
+        DataFrame containing the CSV data
+    """
+    try:
+        # Try to read with semicolon delimiter first
+        df = pd.read_csv(file_path, delimiter=';', encoding='utf-8-sig')
+        return df
+    except Exception as e:
+        logger.error(f"Error reading with semicolon delimiter: {str(e)}")
+        
+        # Try to read with comma delimiter
+        try:
+            df = pd.read_csv(file_path, delimiter=',', encoding='utf-8-sig')
+            return df
+        except Exception as e:
+            logger.error(f"Error reading with comma delimiter: {str(e)}")
+            raise Exception(f"Failed to read CSV file {file_path}: {str(e)}")
+
 
 @tracker.measure_async_time
 async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.csv", batch_size: int = 1000) -> Dict[str, Any]:
@@ -77,7 +105,7 @@ async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.cs
             "success": False,
             "message": f"❌ เกิดข้อผิดพลาดในการอ่านหรือบันทึกข้อมูล: {str(e)}"
         }
-    
+
 @tracker.measure_async_time
 async def clear_csv_collection() -> Dict[str, Any]:
     """
@@ -108,28 +136,3 @@ async def clear_csv_collection() -> Dict[str, Any]:
             "success": False,
             "message": f"❌ เกิดข้อผิดพลาดในการล้างข้อมูล: {str(e)}"
         }
-
-def read_csv_file(file_path: str) -> pd.DataFrame:
-    """
-    Read a CSV file and return a pandas DataFrame
-    
-    Args:
-        file_path: Path to the CSV file
-        
-    Returns:
-        DataFrame containing the CSV data
-    """
-    try:
-        # Try to read with semicolon delimiter first
-        df = pd.read_csv(file_path, delimiter=';', encoding='utf-8-sig')
-        return df
-    except Exception as e:
-        logger.error(f"Error reading with semicolon delimiter: {str(e)}")
-        
-        # Try to read with comma delimiter
-        try:
-            df = pd.read_csv(file_path, delimiter=',', encoding='utf-8-sig')
-            return df
-        except Exception as e:
-            logger.error(f"Error reading with comma delimiter: {str(e)}")
-            raise Exception(f"Failed to read CSV file {file_path}: {str(e)}")

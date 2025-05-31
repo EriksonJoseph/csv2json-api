@@ -12,7 +12,7 @@ class UserRepository:
         user_data["_id"] = str(result.inserted_id)
         return user_data
 
-    async def get_user_by_id(self, user_id: str) -> Optional[Dict]:
+    async def find_by_id(self, user_id: str) -> Optional[Dict]:
         """Get user by ID"""
         if not ObjectId.is_valid(user_id):
             return None
@@ -23,7 +23,7 @@ class UserRepository:
             return individual_serial(user)
         return None
 
-    async def get_user_by_username(self, username: str, include_password: bool = False) -> Optional[Dict]:
+    async def find_by_username(self, username: str, include_password: bool = False) -> Optional[Dict]:
         """Get user by username"""
         users_collection = await get_collection("users")
         projection = None if include_password else {"password": 0}
@@ -34,7 +34,7 @@ class UserRepository:
             return user
         return None
 
-    async def get_user_by_email(self, email: str) -> Optional[Dict]:
+    async def find_by_email(self, email: str) -> Optional[Dict]:
         """Get user by email"""
         users_collection = await get_collection("users")
         user = await users_collection.find_one({"email": email}, {"password": 0})

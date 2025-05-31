@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Query, Path, Depends
-from app.services.task_service import TaskService
-from app.repositories.task_repository import TaskRepository
-from app.repositories.file_repository import FileRepository
-from app.models.task import TaskCreate, TaskUpdate
+from app.routers.task.task_service import TaskService
+from app.routers.task.task_model import TaskCreate, TaskUpdate
 from app.utils.advanced_performance import tracker
 from app.workers.background_worker import get_current_processing_task
 from app.dependencies.auth import require_user
@@ -13,10 +11,8 @@ router = APIRouter(
     responses={404: {"description": "Not Found"}}
 )
 
-# Initialize repositories and service
-task_repository = TaskRepository()
-file_repository = FileRepository()
-task_service = TaskService(task_repository, file_repository)
+# Initialize service
+task_service = TaskService()
 
 @router.get("/current-processing")
 @tracker.measure_async_time
@@ -53,7 +49,6 @@ async def get_task(task_id: str = Path(..., description="ID ของงาน�
 @router.put("/{task_id}")
 @tracker.measure_async_time
 async def update_task(task_id: str, task_update: TaskUpdate, current_user = Depends(require_user)):
-    print("hello torpong!!")
     """
     🔄 อัปเดตข้อมูลงานตาม ID
     """

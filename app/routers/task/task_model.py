@@ -19,3 +19,10 @@ class TaskUpdate(BaseModel):
     column_names: Optional[List[str]] = None
     error_message: Optional[str] = None
     processing_time: Optional[float] = None
+
+class TaskStatus(BaseModel):
+    task_id: str
+    is_done_created_doc: bool
+    column_names: List[str]
+    error_message: Optional[str] = None
+    processing_time: Optional[float] = None

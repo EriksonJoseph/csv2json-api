@@ -1,17 +1,13 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List
-from app.services.auth_service import AuthService
-from app.repositories.user_repository import UserRepository
-from app.repositories.login_repository import LoginRepository
-from app.models.auth import TokenData, UserRole
+from app.routers.auth.auth_service import AuthService
+from app.routers.auth.auth_model import TokenData, UserRole
 from app.exceptions import UserException
 from app.utils.advanced_performance import tracker
 
 # Initialize services
-user_repository = UserRepository()
-login_repository = LoginRepository()
-auth_service = AuthService(user_repository, login_repository)
+auth_service = AuthService()
 
 # Security scheme
 security = HTTPBearer()
@@ -28,7 +24,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     return user_data
 
 async def get_current_active_user(current_user: TokenData = Depends(get_current_user)) -> TokenData:
-    user = await user_repository.get_user_by_id(current_user.user_id)
+    from app.routers.user.user_repository import UserRepository
+    user_repository = UserRepository()
+    user = await user_repository.find_by_id(current_user.user_id)
     if not user or not user.get("is_active", True):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

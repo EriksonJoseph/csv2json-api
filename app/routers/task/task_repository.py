@@ -63,7 +63,7 @@ class TaskRepository:
             raise ValueError("Invalid task_id format")
             
         # Convert Pydantic model to dictionary and filter out None values
-        update_data = {"$set": {k: v for k, v in task_update.dict().items() if v is not None}}
+        update_data = {"$set": {k: v for k, v in task_update.items() if v is not None}}
         result = await tasks_collection.update_one(
             {"_id": ObjectId(task_id)},
             update_data

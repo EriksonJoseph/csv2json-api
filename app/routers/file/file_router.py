@@ -1,7 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Query, Depends
 from fastapi.responses import FileResponse
-from app.services.file_service import FileService
-from app.repositories.file_repository import FileRepository
+from app.routers.file.file_service import FileService
 from app.utils.advanced_performance import tracker
 from app.dependencies.auth import require_user
 
@@ -11,9 +10,8 @@ router = APIRouter(
     responses={404: {"description": "Not Found"}}
 )
 
-# Initialize repository and service
-file_repository = FileRepository()
-file_service = FileService(file_repository)
+# Initialize service
+file_service = FileService()
 
 @router.post("/upload")
 @tracker.measure_async_time

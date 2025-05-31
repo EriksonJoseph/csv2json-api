@@ -1,9 +1,9 @@
 from typing import Optional, Dict
 from datetime import datetime
 from app.database import get_collection
-from app.models.login import LoginHistory, LoginAttempt
+from app.routers.auth.auth_model import LoginHistory, LoginAttempt
 
-class LoginRepository:
+class AuthRepository:
     async def add_login_history(self, history: LoginHistory):
         """
         Add a new login history record

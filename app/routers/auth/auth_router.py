@@ -1,14 +1,19 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
-from app.models.auth import UserLogin, Token, RefreshTokenRequest
-from app.models.user import UserCreate
-from app.dependencies.auth import auth_service, get_current_user, require_admin
-from app.utils.advanced_performance import tracker
 from typing import Dict
+from app.routers.auth.auth_model import UserLogin, Token, RefreshTokenRequest
+from app.routers.user.user_model import UserCreate
+from app.dependencies.auth import get_current_user, require_admin
+from app.utils.advanced_performance import tracker
+from app.routers.auth.auth_service import AuthService
 
+# Create a router instance
 router = APIRouter(
     prefix="/auth",
     tags=["authentication"]
 )
+
+# Create instance of AuthService
+auth_service = AuthService()
 
 @router.post("/login", response_model=Token)
 @tracker.measure_async_time

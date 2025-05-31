@@ -1,9 +1,9 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from bson import ObjectId
-from app.repositories.task_repository import TaskRepository
-from app.repositories.file_repository import FileRepository
-from app.models.task import TaskCreate, TaskUpdate
+from app.routers.task.task_repository import TaskRepository
+from app.routers.task.task_model import TaskCreate, TaskUpdate
+from app.routers.file.file_repository import FileRepository
 from app.exceptions import TaskException
 from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor
@@ -18,9 +18,9 @@ thread_pool = ThreadPoolExecutor(max_workers=4)
 cached_files: Dict[str, Any] = {}
 
 class TaskService:
-    def __init__(self, task_repository: TaskRepository, file_repository: FileRepository):
-        self.task_repository = task_repository
-        self.file_repository = file_repository
+    def __init__(self):
+        self.task_repository = TaskRepository()
+        self.file_repository = FileRepository()
 
     @lru_cache(maxsize=128)
     async def get_cached_file(self, file_id: str):
@@ -72,7 +72,11 @@ class TaskService:
         # Create task
         task_id = await self.task_repository.create_task(task_data)
         created_task = await self.task_repository.get_task_by_id(task_id)
-
+        
+        # Add task to processing queue
+        from app.workers.background_worker import add_task_to_queue
+        await add_task_to_queue(str(task_id), task.file_id)
+        
         return created_task
 
     async def process_large_csv(self, file_path: str, chunk_size: int = 10000):
@@ -87,15 +91,6 @@ class TaskService:
         return pd.concat(chunks, ignore_index=True)
 
     async def get_all_tasks(self, page: int = 1, limit: int = 10) -> dict:
-        """Get all tasks with pagination and caching"""
-        # Use cached result if available
-        cache_key = f"tasks_page_{page}_limit_{limit}"
-        if cache_key in cached_files:
-            return cached_files[cache_key]
-
-        tasks = await self.task_repository.get_all_tasks(page, limit)
-        cached_files[cache_key] = tasks
-        return tasks
         """Get all tasks with pagination"""
         tasks, total = await self.task_repository.get_all_tasks(page, limit)
         return {
@@ -122,47 +117,13 @@ class TaskService:
             except ValueError:
                 raise TaskException("Invalid date format (must be YYYY-MM-DD)")
 
-        updated_task = await self.task_repository.update_task(task_id, task_update)
+        # Convert Pydantic model to dictionary
+        update_data = task_update.dict(exclude_unset=True)
+        update_data["updated_at"] = datetime.now()
+        
+        updated_task = await self.task_repository.update_task(task_id, update_data)
         return updated_task
 
     async def delete_task(self, task_id: str) -> bool:
         """Delete task"""
         return await self.task_repository.delete_task(task_id)
-
-    async def create_task(self, task: TaskCreate) -> dict:
-        # Optimize date parsing using ThreadPoolExecutor
-        async def parse_dates():
-            return await asyncio.get_event_loop().run_in_executor(
-                thread_pool,
-                lambda: (
-                    datetime.strptime(task.created_file_date, "%Y-%m-%d"),
-                    datetime.strptime(task.updated_file_date, "%Y-%m-%d")
-                )
-            )
-
-        # Parse dates
-        created_file_date, updated_file_date = await parse_dates()
-
-        # Prepare task data
-        task_data = {
-            "topic": task.topic,
-            "created_file_date": created_file_date,
-            "updated_file_date": updated_file_date,
-            "references": task.references,
-            "file_id": task.file_id,
-            "is_done_created_doc": False,
-            "column_names": [],
-            "error_message": None,
-            "created_at": datetime.now(),
-            "updated_at": datetime.now()
-        }
-
-        # Create task
-        task_id = await self.task_repository.create_task(task_data)
-        created_task = await self.task_repository.get_task_by_id(task_id)
-        
-        # Add task to processing queue
-        from app.workers.background_worker import add_task_to_queue
-        await add_task_to_queue(str(task_id), task.file_id)
-        
-        return created_task

@@ -6,7 +6,7 @@ import time
 
 from app.config import get_settings
 from app.database import initialize_db
-from app.routers import router, auth
+from app.routers import router
 from app.utils.advanced_performance import tracker
 from app.workers.background_worker import start_worker, load_pending_tasks
 

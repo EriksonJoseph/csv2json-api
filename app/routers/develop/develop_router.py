@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.services.csv_service import read_and_save_csv_to_mongodb, clear_csv_collection
+from app.dependencies.file import read_and_save_csv_to_mongodb, clear_csv_collection
 from app.utils.advanced_performance import tracker
 from app.dependencies.auth import require_admin
 

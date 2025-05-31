@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Query, Path, Depends
-from app.services.user_service import UserService
-from app.repositories.user_repository import UserRepository
-from app.models.user import UserCreate, UserUpdate
+from fastapi import APIRouter, Query, Path, Depends, HTTPException
+from app.routers.user.user_service import UserService
+from app.routers.user.user_model import UserCreate, UserUpdate
 from app.utils.advanced_performance import tracker
 from app.dependencies.auth import require_admin, require_user, get_current_user
+from bson import ObjectId
 
 router = APIRouter(
     prefix="/user",
@@ -11,9 +11,8 @@ router = APIRouter(
     responses={404: {"description": "Not Found"}}
 )
 
-# Initialize repository and service
-user_repository = UserRepository()
-user_service = UserService(user_repository)
+# Initialize service
+user_service = UserService()
 
 @router.post("/")
 @tracker.measure_async_time
@@ -76,21 +75,28 @@ async def delete_user(user_id: str = Path(..., description="ID ของผู�
     """
     ลบผู้ใช้ (เฉพาะ Admin)
     """
-    return await user_service.delete_user(user_id)
-    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    # Validate user_id
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
     
-    # ตรวจสอบว่าพบผู้ใช้หรือไม่
+    # Check if user exists
+    user = await user_service.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="🔍 ไม่พบผู้ใช้ที่ต้องการลบ")
     
-    # ลบข้อมูลผู้ใช้จาก MongoDB
+    # Delete user
+    # Note: We need to add delete_user method to UserService
+    from app.database import get_collection
+    from app.utils.serializers import individual_serial
+    
+    users_collection = await get_collection("users")
     result = await users_collection.delete_one({"_id": ObjectId(user_id)})
     
-    # ตรวจสอบว่าลบสำเร็จหรือไม่
+    # Check if delete was successful
     if result.deleted_count == 0:
         raise HTTPException(status_code=500, detail="⚠️ เกิดข้อผิดพลาดในการลบข้อมูล")
     
-    # แปลงข้อมูลที่ถูกลบและส่งกลับ
+    # Return deleted user data
     return {
         "message": "🗑️ ลบข้อมูลผู้ใช้สำเร็จ",
         "deleted_user": individual_serial(user)

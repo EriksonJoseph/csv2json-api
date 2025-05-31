@@ -1,15 +1,14 @@
 import os
 import shutil
 from datetime import datetime
-from bson import ObjectId
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
-from app.repositories.file_repository import FileRepository
+from app.routers.file.file_repository import FileRepository
 from app.exceptions import FileException
 
 class FileService:
-    def __init__(self, file_repository: FileRepository):
-        self.file_repository = file_repository
+    def __init__(self):
+        self.file_repository = FileRepository()
 
     async def upload_file(self, file: UploadFile) -> dict:
         """
