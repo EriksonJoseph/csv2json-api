@@ -1,11 +1,13 @@
 import os
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from app.models.auth import Token, TokenData, UserLogin
+from app.models.auth import Token, TokenData, UserLogin, RefreshTokenRequest
 from app.models.login import LoginHistory, LoginAttempt, LoginSettings
 from app.models.user import UserCreate
+from app.models.refresh_token import RefreshToken
 from app.repositories.user_repository import UserRepository
 from app.exceptions import UserException
 from app.repositories.login_repository import LoginRepository
@@ -19,9 +21,15 @@ class AuthService:
         self.login_repository = login_repository
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         self.SECRET_KEY = settings.JWT_SECRET_KEY
+        self.REFRESH_SECRET_KEY = settings.JWT_REFRESH_SECRET_KEY
         self.ALGORITHM = settings.JWT_ALGORITHM
         self.ACCESS_TOKEN_EXPIRE_MINUTES = int(settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+        self.REFRESH_TOKEN_EXPIRE_MINUTES = int(settings.JWT_REFRESH_TOKEN_EXPIRE_MINUTES)
         self.login_settings = LoginSettings()  # ตั้งค่า default login settings
+        
+        # In-memory storage for refresh tokens
+        # In production, this should be replaced with a database storage
+        self.refresh_tokens = {}
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return self.pwd_context.verify(plain_password, hashed_password)
@@ -39,6 +47,81 @@ class AuthService:
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return encoded_jwt
+        
+    def create_refresh_token(self, user_id: str, ip_address: str, user_agent: Optional[str] = None) -> str:
+        # Generate a unique token
+        token = str(uuid.uuid4())
+        
+        # Calculate expiration time
+        expires_at = datetime.utcnow() + timedelta(minutes=self.REFRESH_TOKEN_EXPIRE_MINUTES)
+        
+        # Create refresh token object
+        refresh_token = RefreshToken(
+            user_id=user_id,
+            token=token,
+            expires_at=expires_at,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
+        # Store token in memory (in production, use a database)
+        self.refresh_tokens[token] = refresh_token
+        
+        return token
+        
+    def verify_refresh_token(self, token: str) -> Optional[RefreshToken]:
+        # Check if token exists in storage
+        refresh_token = self.refresh_tokens.get(token)
+        if not refresh_token:
+            return None
+            
+        # Check if token is expired or revoked
+        if refresh_token.revoked or refresh_token.expires_at < datetime.utcnow():
+            return None
+            
+        return refresh_token
+        
+    def revoke_refresh_token(self, token: str) -> bool:
+        refresh_token = self.refresh_tokens.get(token)
+        if not refresh_token:
+            return False
+            
+        # Mark as revoked
+        refresh_token.revoked = True
+        refresh_token.revoked_at = datetime.utcnow()
+        self.refresh_tokens[token] = refresh_token
+        
+        return True
+        
+    async def refresh_access_token(self, refresh_token: str) -> Optional[Token]:
+        token_data = self.verify_refresh_token(refresh_token)
+        if not token_data:
+            return None
+            
+        # Get user info
+        user = await self.user_repository.get_user_by_id(token_data.user_id)
+        if not user or not user.get("is_active", True):
+            return None
+            
+        # Create new access token
+        access_token_expires = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = self.create_access_token(
+            data={
+                "sub": user["username"],
+                "user_id": str(user["_id"]),
+                "roles": user.get("roles", ["user"])
+            },
+            expires_delta=access_token_expires
+        )
+        
+        # Return new token response
+        return Token(
+            access_token=access_token,
+            refresh_token=refresh_token,  # Keep using the same refresh token
+            token_type="bearer",
+            expires_in=self.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            refresh_expires_in=self.REFRESH_TOKEN_EXPIRE_MINUTES * 60
+        )
 
     async def authenticate_user(self, username: str, password: str, ip_address: str):
         """
@@ -288,7 +371,7 @@ class AuthService:
             }
     })
 
-    async def login(self, user_login: UserLogin, ip_address: str) -> Token:
+    async def login(self, user_login: UserLogin, ip_address: str, user_agent: Optional[str] = None) -> Token:
         """
         Handle user login with rate limiting and tracking
         """
@@ -299,6 +382,7 @@ class AuthService:
         if not user.get("is_active", True):
             raise UserException("User account is disabled", status_code=401)
 
+        # Create access token
         access_token_expires = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = self.create_access_token(
             data={
@@ -309,10 +393,19 @@ class AuthService:
             expires_delta=access_token_expires
         )
         
+        # Create refresh token
+        refresh_token = self.create_refresh_token(
+            user_id=str(user["_id"]), 
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
         return Token(
             access_token=access_token,
+            refresh_token=refresh_token,
             token_type="bearer",
-            expires_in=self.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            expires_in=self.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            refresh_expires_in=self.REFRESH_TOKEN_EXPIRE_MINUTES * 60
         )
 
     async def register(self, user: UserCreate) -> Dict:

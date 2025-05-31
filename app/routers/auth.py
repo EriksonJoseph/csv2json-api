@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, Request
-from app.models.auth import UserLogin, Token
+from fastapi import APIRouter, Depends, Request, HTTPException
+from app.models.auth import UserLogin, Token, RefreshTokenRequest
 from app.models.user import UserCreate
 from app.dependencies.auth import auth_service, get_current_user, require_admin
 from app.utils.advanced_performance import tracker
@@ -18,8 +18,10 @@ async def login(request: Request, user_login: UserLogin):
     """
     # Get client IP address
     ip_address = request.client.host
+    # Get user agent if available
+    user_agent = request.headers.get("user-agent")
     
-    return await auth_service.login(user_login, ip_address)
+    return await auth_service.login(user_login, ip_address, user_agent)
 
 @router.get("/login_history/{user_id}", response_model=Dict)
 @tracker.measure_async_time
@@ -70,3 +72,36 @@ async def encrypt_password(password: str):
     🔐 Encrypt password
     """
     return auth_service.get_password_hash(password)
+
+
+@router.post("/refresh", response_model=Token)
+@tracker.measure_async_time
+async def refresh_token(request: Request, refresh_request: RefreshTokenRequest):
+    """
+    🔄 Refresh access token using a refresh token
+    """
+    # Get client information
+    ip_address = request.client.host
+    
+    # Refresh the token
+    new_token = await auth_service.refresh_access_token(refresh_request.refresh_token)
+    if not new_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired refresh token"
+        )
+    
+    return new_token
+
+
+@router.post("/logout")
+@tracker.measure_async_time
+async def logout(refresh_request: RefreshTokenRequest):
+    """
+    🚪 Logout - revoke the refresh token
+    """
+    # Revoke the refresh token
+    success = auth_service.revoke_refresh_token(refresh_request.refresh_token)
+    
+    return {"status": "success" if success else "error", 
+            "message": "Successfully logged out" if success else "Invalid token"}
