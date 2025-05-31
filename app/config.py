@@ -28,5 +28,16 @@ class Settings(BaseSettings):
 def get_settings():
     # ตรวจสอบและรีโหลด settings ถ้ามีการเปลี่ยนแปลงในไฟล์ .env
     if os.path.exists(".env"):
-        os.environ.pop("MONGODB_URI", None)  # ลบค่าเก่า
+        # ลบค่า environment variables ทั้งหมดที่กำหนดใน .env
+        env_vars = [
+            "MONGODB_URI",
+            "MONGODB_DB",
+            "JWT_SECRET_KEY",
+            "JWT_ALGORITHM",
+            "JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
+            "JWT_REFRESH_SECRET_KEY",
+            "JWT_REFRESH_TOKEN_EXPIRE_MINUTES"
+        ]
+        for var in env_vars:
+            os.environ.pop(var, None)
     return Settings()
