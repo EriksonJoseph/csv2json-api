@@ -62,3 +62,11 @@ async def unlock_user(user_id: str, current_user = Depends(require_admin)):
     if not success:
         return {"status": "error", "message": "Failed to unlock user"}
     return {"status": "success", "message": "User unlocked successfully"}
+
+@router.get("/encrypt-password/{password}", response_model=str)
+@tracker.measure_async_time
+async def encrypt_password(password: str):
+    """
+    🔐 Encrypt password
+    """
+    return auth_service.get_password_hash(password)

@@ -16,7 +16,9 @@ class Settings(BaseSettings):
     # JWT settings
     JWT_SECRET_KEY: str = "fallback-secret-key"
     JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_REFRESH_SECRET_KEY: str = "fallback-refresh-secret-key"
+    JWT_REFRESH_TOKEN_EXPIRE_MINUTES: int = 1440
     
     class Config:
         env_file = ".env"  # อ่านค่าจากไฟล์ .env

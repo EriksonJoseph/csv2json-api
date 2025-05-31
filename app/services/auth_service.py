@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 from jose import JWTError, jwt
@@ -8,15 +9,18 @@ from app.models.user import UserCreate
 from app.repositories.user_repository import UserRepository
 from app.exceptions import UserException
 from app.repositories.login_repository import LoginRepository
+from app.config import get_settings
+from app.utils.performance import measure_time
 
 class AuthService:
     def __init__(self, user_repository: UserRepository, login_repository: LoginRepository):
+        settings = get_settings()
         self.user_repository = user_repository
         self.login_repository = login_repository
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        self.SECRET_KEY = "your-secret-key-here"  # Should be stored in .env
-        self.ALGORITHM = "HS256"
-        self.ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
+        self.SECRET_KEY = settings.JWT_SECRET_KEY
+        self.ALGORITHM = settings.JWT_ALGORITHM
+        self.ACCESS_TOKEN_EXPIRE_MINUTES = int(settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
         self.login_settings = LoginSettings()  # ตั้งค่า default login settings
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
@@ -170,33 +174,6 @@ class AuthService:
                 }
             }
         })
-
-    async def login(self, user_login: UserLogin, ip_address: str) -> Token:
-        """
-        Handle user login with rate limiting and tracking
-        """
-        user = await self.authenticate_user(user_login.username, user_login.password, ip_address)
-        if not user:
-            raise UserException("Invalid username or password", status_code=401)
-        
-        if not user.get("is_active", True):
-            raise UserException("User account is disabled", status_code=401)
-
-        access_token_expires = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = self.create_access_token(
-            data={
-                "sub": user["username"],
-                "user_id": str(user["_id"]),
-                "roles": user.get("roles", ["user"])
-            },
-            expires_delta=access_token_expires
-        )
-        
-        return Token(
-            access_token=access_token,
-            token_type="bearer",
-            expires_in=self.ACCESS_TOKEN_EXPIRE_MINUTES * 60
-        )
 
     async def register(self, user: UserCreate) -> Dict:
         """
