@@ -74,13 +74,12 @@ async def process_csv_task(task_id: str, file_id: str):
         
         # Get collection
         csv_collection = await get_collection("csv")
-        
+
         # Extract column names
         column_names = df.columns.tolist()
-        
+
         # Convert DataFrame to list of dictionaries for MongoDB insertion
         records = df.to_dict("records")
-        print(f"records: {len(records)}")
         
         # Add metadata to each record
         for record in records:

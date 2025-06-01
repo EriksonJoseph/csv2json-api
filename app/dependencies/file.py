@@ -5,34 +5,63 @@ from app.utils.advanced_performance import tracker, TimedBlock
 from typing import Dict, Any
 import pprint
 import os
+from app.database import get_collection
+import csv
 
 logger = logging.getLogger("file")
 
 def read_csv_file(file_path: str) -> pd.DataFrame:
     """
-    Read a CSV file and return a pandas DataFrame
-    
-    Args:
-        file_path: Path to the CSV file
-    
-    Returns:
-        DataFrame containing the CSV data
+    Read a CSV file and return a pandas DataFrame with automatic delimiter detection
     """
+    encoding = 'utf-8-sig'
+    
     try:
-        # Try to read with semicolon delimiter first
-        df = pd.read_csv(file_path, delimiter=';', encoding='utf-8-sig')
-        return df
-    except Exception as e:
-        logger.error(f"Error reading with semicolon delimiter: {str(e)}")
+        # ใช้ csv.Sniffer เพื่อตรวจหา delimiter
+        with open(file_path, 'r', encoding=encoding) as file:
+            # อ่าน sample ข้อมูลเพื่อตรวจสอบ
+            sample = file.read(1024)
+            file.seek(0)  # reset file pointer
+            
+            # ใช้ Sniffer ตรวจหา delimiter
+            sniffer = csv.Sniffer()
+            delimiter = sniffer.sniff(sample).delimiter
+            
+        logger.info(f"Detected delimiter: '{delimiter}'")
         
-        # Try to read with comma delimiter
-        try:
-            df = pd.read_csv(file_path, delimiter=',', encoding='utf-8-sig')
-            return df
-        except Exception as e:
-            logger.error(f"Error reading with comma delimiter: {str(e)}")
-            raise Exception(f"Failed to read CSV file {file_path}: {str(e)}")
-
+        # อ่านไฟล์ด้วย delimiter ที่ตรวจพบ
+        df = pd.read_csv(file_path, delimiter=delimiter, encoding=encoding)
+        
+        # ตรวจสอบผลลัพธ์
+        logger.info(f"Successfully read CSV with {len(df.columns)} columns and {len(df)} rows")
+        
+        return df
+        
+    except Exception as e:
+        logger.error(f"Sniffer failed, trying manual detection: {str(e)}")
+        
+        # ถ้า Sniffer ล้มเหลว ให้ลองทุก delimiter
+        delimiters = [',', ';', '\t', '|']
+        best_df = None
+        max_columns = 1
+        
+        for delimiter in delimiters:
+            try:
+                df = pd.read_csv(file_path, delimiter=delimiter, encoding=encoding)
+                
+                # เลือก delimiter ที่ให้ column มากที่สุด
+                if len(df.columns) > max_columns:
+                    max_columns = len(df.columns)
+                    best_df = df
+                    logger.info(f"Better result with '{delimiter}': {len(df.columns)} columns")
+                    
+            except Exception:
+                continue
+        
+        if best_df is not None:
+            return best_df
+        else:
+            raise Exception(f"Failed to read CSV file {file_path} with any delimiter")
 
 @tracker.measure_async_time
 async def read_and_save_csv_to_mongodb(file_path: str = "data/sample_100_rows.csv", batch_size: int = 1000) -> Dict[str, Any]:
