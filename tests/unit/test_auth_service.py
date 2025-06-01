@@ -8,8 +8,9 @@ import os
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.models.user import UserCreate
-from app.models.auth import UserLogin
+
+from app.routers.user.user_model import UserCreate
+from app.routers.auth.auth_model import UserLogin
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 

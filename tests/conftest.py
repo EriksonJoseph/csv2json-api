@@ -18,10 +18,20 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from app.main import app
 from app.config import get_settings
 from app.database import get_database, get_client
-from app.models.user import UserCreate, UserRole
-from app.services.auth_service import AuthService
-from app.repositories.user_repository import UserRepository
-from app.repositories.login_repository import LoginRepository
+# Mock user models for testing
+class UserRole:
+    USER = "user"
+    ADMIN = "admin"
+
+class UserCreate:
+    def __init__(self, username, password, email, full_name):
+        self.username = username
+        self.password = password
+        self.email = email
+        self.full_name = full_name
+from app.routers.auth.auth_service import AuthService
+from app.routers.user.user_repository import UserRepository
+from app.routers.auth.auth_repository import AuthRepository as LoginRepository
 
 # Initialize settings
 settings = get_settings()
@@ -100,9 +110,9 @@ async def auth_service(mock_db):
     """Create an AuthService with mocked dependencies."""
     # The repositories will use the mocked database from the mock_db fixture
     # which is already set up to use mongomock
-    from app.repositories.user_repository import UserRepository
-    from app.repositories.login_repository import LoginRepository
-    from app.services.auth_service import AuthService
+    from app.routers.user.user_repository import UserRepository
+    from app.routers.auth.auth_repository import AuthRepository as LoginRepository
+    from app.routers.auth.auth_service import AuthService
     
     # Create new instances for each test to avoid state leakage
     user_repo = UserRepository()
@@ -120,7 +130,7 @@ async def auth_service(mock_db):
 @pytest_asyncio.fixture
 async def user_repository(mock_db):
     """Get the UserRepository instance with a clean mock database."""
-    from app.repositories.user_repository import UserRepository
+    from app.routers.user.user_repository import UserRepository
     # Clear any existing data
     await mock_db.users.delete_many({})
     return UserRepository()
@@ -128,7 +138,7 @@ async def user_repository(mock_db):
 @pytest_asyncio.fixture
 async def login_repository(mock_db):
     """Get the LoginRepository instance with a clean mock database."""
-    from app.repositories.login_repository import LoginRepository
+    from app.routers.auth.auth_repository import AuthRepository as LoginRepository
     # Clear any existing data
     await mock_db.login_attempts.delete_many({})
     return LoginRepository()
