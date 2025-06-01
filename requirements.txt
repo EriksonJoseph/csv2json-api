@@ -8,6 +8,9 @@ motor==3.1.2
 pydantic==1.10.7
 httpx==0.24.0
 
+# Fuzzy matching
+rapidfuzz==3.2.0
+
 # Testing dependencies
 pytest==7.3.1
 pytest-asyncio==0.21.0

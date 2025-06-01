@@ -5,6 +5,7 @@ from app.routers.task.task_router import router as task_router
 from app.routers.file.file_router import router as file_router
 from app.routers.develop.develop_router import router as develop_router
 from app.routers.watchlist.watchlist_router import router as watchlist_router
+from app.routers.matching.matching_router import router as matching_router
 
 # สร้าง APIRouter หลัก
 router = APIRouter()
@@ -16,3 +17,4 @@ router.include_router(develop_router)
 router.include_router(file_router)
 router.include_router(task_router)
 router.include_router(watchlist_router)
+router.include_router(matching_router)
