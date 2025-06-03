@@ -1,23 +1,10 @@
 fastapi==0.95.1
-uvicorn==0.22.0
+uvicorn[standard]==0.22.0  # Standard version includes uvloop for better performance
 pandas==2.0.1
-python-dotenv==1.0.0
 pymongo==4.3.3
 python-multipart==0.0.6
 motor==3.1.2
 pydantic==1.10.7
-httpx==0.24.0
-
-# Fuzzy matching
-rapidfuzz==3.2.0
-
-# Testing dependencies
-pytest==7.3.1
-pytest-asyncio==0.21.0
-pytest-cov==4.1.0
 python-jose[cryptography]==3.3.0
-asyncio==3.4.3
-mongomock-motor==0.0.19
-
 bcrypt==4.0.1
-passlib==1.7.4
+rapidfuzz==3.2.0
