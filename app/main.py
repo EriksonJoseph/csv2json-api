@@ -41,14 +41,6 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
     return response
 
-# เพิ่ม router หลัก
-app.include_router(router, prefix="/api")
-
-# สร้าง route สำหรับดู performance statistics
-@app.get("/api/performance")
-async def get_performance_stats():
-    stats = tracker.get_stats()
-    return stats
 
 # สร้าง route หลัก
 @app.get("/")
@@ -58,6 +50,15 @@ async def root():
         "docs": "/api/docs",
         "version": "1.0.0"
     }
+
+# เพิ่ม router หลัก
+app.include_router(router, prefix="/api")
+
+# สร้าง route สำหรับดู performance statistics
+@app.get("/api/performance")
+async def get_performance_stats():
+    stats = tracker.get_stats()
+    return stats
 
 # จัดการ startup event
 @app.on_event("startup")
@@ -82,6 +83,8 @@ async def shutdown_event():
     
     # ทำความสะอาดทรัพยากรต่างๆ ถ้าจำเป็น
     pass
+
+handler = app
 
 # รัน server ถ้าเรียกไฟล์นี้โดยตรง
 if __name__ == "__main__":

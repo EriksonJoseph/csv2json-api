@@ -4,28 +4,23 @@
         {
             "src": "app/main.py",
             "use": "@vercel/python"
-        },
-        {
-            "src": "app/api/*.py",
-            "use": "@vercel/python"
         }
     ],
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "/app/main.py"
+            "dest": "app/main.py"
         }
     ],
     "env": {
         "PYTHONUNBUFFERED": "true",
-        "PYTHONPATH": "/var/task:/var/task/app"
+        "PYTHONPATH": "/var/task"
     },
     "build": {
         "env": {
-            "PYTHON_VERSION": "3.9"
+            "PYTHON_VERSION": "3.9",
+            "PIP_CACHE_DIR": "/tmp/.pip-cache",
+            "PIP_NO_CACHE_DIR": "false"
         }
-    },
-    "rewrites": [
-        { "source": "/(.*)", "destination": "/app/main.py" }
-    ]
+    }
 }
