@@ -1,0 +1,31 @@
+{
+    "version": 1,
+    "builds": [
+        {
+            "src": "app/main.py",
+            "use": "@vercel/python"
+        },
+        {
+            "src": "app/api/*.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "/app/main.py"
+        }
+    ],
+    "env": {
+        "PYTHONUNBUFFERED": "true",
+        "PYTHONPATH": "/var/task:/var/task/app"
+    },
+    "build": {
+        "env": {
+            "PYTHON_VERSION": "3.9"
+        }
+    },
+    "rewrites": [
+        { "source": "/(.*)", "destination": "/app/main.py" }
+    ]
+}
