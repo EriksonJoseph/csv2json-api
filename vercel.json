@@ -10,7 +10,7 @@
         }
     ],
     "functions": {
-        "app/main.py": {
+        "app/**": {
             "excludeFiles": "{tests/**, logs/**, temp/**, data/**, *.md, .git/**, __pycache__/**, *.pyc}/**"
         }
     },
