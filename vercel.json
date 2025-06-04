@@ -9,11 +9,6 @@
             }
         }
     ],
-    "functions": {
-        "app/**": {
-            "excludeFiles": "{tests/**, logs/**, temp/**, data/**, *.md, .git/**, __pycache__/**, *.pyc}/**"
-        }
-    },
     "routes": [
         {
             "src": "/(.*)",
