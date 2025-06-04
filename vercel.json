@@ -11,16 +11,7 @@
     ],
     "functions": {
         "app/main.py": {
-            "excludeFiles": [
-                "tests/**",
-                "logs/**",
-                "temp/**",
-                "data/**",
-                "*.md",
-                ".git/**",
-                "__pycache__/**",
-                "*.pyc"
-            ]
+            "excludeFiles": "{tests/**, logs/**, temp/**, data/**, *.md, .git/**, __pycache__/**, *.pyc}/**"
         }
     },
     "routes": [
