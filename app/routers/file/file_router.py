@@ -3,6 +3,8 @@ from fastapi.responses import FileResponse
 from app.routers.file.file_service import FileService
 from app.utils.advanced_performance import tracker
 from app.dependencies.auth import require_user
+from app.api.schemas import PaginationResponse
+from typing import Dict, Any
 
 router = APIRouter(
     prefix="/files",
@@ -21,7 +23,7 @@ async def upload_file(file: UploadFile = File(...), current_user = Depends(requi
     """
     return await file_service.upload_file(file)
 
-@router.get("/")
+@router.get("/", response_model=PaginationResponse[Dict[str, Any]])
 @tracker.measure_async_time
 async def get_all_files(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100), current_user = Depends(require_user)):
     """

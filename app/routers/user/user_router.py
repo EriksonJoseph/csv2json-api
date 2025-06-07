@@ -4,6 +4,8 @@ from app.routers.user.user_model import UserCreate, UserUpdate
 from app.utils.advanced_performance import tracker
 from app.dependencies.auth import require_admin, require_user, get_current_user
 from bson import ObjectId
+from app.api.schemas import PaginationResponse
+from typing import Dict, Any
 
 router = APIRouter(
     prefix="/user",
@@ -45,7 +47,7 @@ async def get_user(
     
     return await user_service.get_user(user_id)
 
-@router.get("/")
+@router.get("/", response_model=PaginationResponse[Dict[str, Any]])
 @tracker.measure_async_time
 async def get_all_users(
     page: int = Query(1, ge=1), 
@@ -64,8 +66,10 @@ async def get_all_users(
         user = await user_service.get_user(current_user.user_id)
         if user:
             return {
-                "message": "👤 ข้อมูลผู้ใช้",
-                "users": [user]
+                "list": [user],
+                "total": 1,
+                "page": page,
+                "limit": limit
             }
         raise HTTPException(status_code=404, detail="User not found")
 

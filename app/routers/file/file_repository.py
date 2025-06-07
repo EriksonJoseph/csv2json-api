@@ -32,7 +32,7 @@ class FileRepository:
         files = await cursor.to_list(length=limit)
         
         return {
-            "files": list_serial(files),
+            "list": list_serial(files),
             "total": total,
             "page": page,
             "limit": limit

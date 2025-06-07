@@ -92,7 +92,7 @@ class UserRepository:
         users = await cursor.to_list(length=limit)
         
         return {
-            "users": list_serial(users),
+            "list": list_serial(users),
             "total": total,
             "page": page,
             "limit": limit

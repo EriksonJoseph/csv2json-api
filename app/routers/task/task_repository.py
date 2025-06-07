@@ -3,6 +3,7 @@ from datetime import datetime
 from bson import ObjectId
 from app.database import get_collection
 from app.utils.serializers import list_serial
+import pprint
 
 class TaskRepository:
     async def create_task(self, task_data: dict) -> str:
@@ -32,6 +33,8 @@ class TaskRepository:
             task["updated_file_date"] = task["updated_file_date"].strftime("%Y-%m-%d")
             task["created_at"] = task["created_at"].isoformat()
             task["updated_at"] = task["updated_at"].isoformat()
+            # Remove column_names from response
+            task.pop("column_names", None)
         
         return tasks, total
 
@@ -52,6 +55,8 @@ class TaskRepository:
                 task["updated_file_date"] = task["updated_file_date"].strftime("%Y-%m-%d")
             task["created_at"] = task["created_at"].isoformat()
             task["updated_at"] = task["updated_at"].isoformat()
+            # Remove column_names from response
+            task.pop("column_names", None)
         
         return task
 

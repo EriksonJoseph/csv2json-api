@@ -25,6 +25,8 @@ class SingleSearchResponse(BaseModel):
     name: str
     matched: float = Field(description="Best match confidence score")
     found: bool = Field(description="Whether any match above threshold was found")
+    total_rows: int = Field(default=0, description="Search from total rows")
+    execution_time_ms: float = Field(default=0.0, description="Totla executed time")
     matched_records: List[MatchedRecord] = Field(default_factory=list)
 
 class BulkSearchItem(BaseModel):
@@ -39,11 +41,12 @@ class BulkSearchResponse(BaseModel):
 
 class AvailableColumnsResponse(BaseModel):
     task_id: str
-    available_columns: List[str] = Field(description="All available columns in the dataset")
+    columns: List[str] = Field(description="All available columns in the dataset")
     recommended_columns: List[str] = Field(description="Recommended columns for name matching")
     total_records: int = Field(description="Total number of records in the dataset")
 
 class SearchHistoryItem(BaseModel):
+    _id: str
     search_id: str
     task_id: str
     search_type: str = Field(description="single or bulk")
@@ -52,11 +55,13 @@ class SearchHistoryItem(BaseModel):
     threshold_used: int
     results_found: int
     total_searched: int
+    execution_time_ms: float = Field(description="Execution time in milliseconds")
+    total_rows: int = Field(description="Total rows in the dataset")
     created_at: datetime
     created_by: str = Field(description="User ID who performed the search")
 
 class SearchHistoryResponse(BaseModel):
-    history: List[SearchHistoryItem]
+    list: List[SearchHistoryItem]
     total: int
     page: int
     limit: int

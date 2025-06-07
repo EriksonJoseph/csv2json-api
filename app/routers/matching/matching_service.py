@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional, Tuple
 import re
+import time
 from rapidfuzz import fuzz, process
 from app.routers.matching.matching_repository import MatchingRepository
 from app.routers.matching.matching_model import (
@@ -121,9 +122,14 @@ class MatchingService:
     async def single_search(self, request: SingleSearchRequest, user_id: str) -> SingleSearchResponse:
         """Perform single name search"""
         
+        start_time = time.time()
+        
         # Validate task exists
         if not await self.repository.validate_task_exists(request.task_id):
             raise TaskException(f"Task {request.task_id} not found or has no data")
+        
+        # Get total rows count
+        total_rows = await self.repository.get_task_record_count(request.task_id)
         
         # Get CSV data for the specified columns
         data = await self.repository.search_in_columns(
@@ -142,6 +148,10 @@ class MatchingService:
             threshold=request.threshold
         )
         
+        # Calculate execution time
+        end_time = time.time()
+        execution_time_ms = (end_time - start_time) * 1000
+        
         # Prepare response
         best_match_score = matched_records[0].confidence if matched_records else 0.0
         found = len(matched_records) > 0
@@ -156,6 +166,8 @@ class MatchingService:
             "threshold_used": request.threshold,
             "results_found": len(matched_records),
             "total_searched": 1,
+            "execution_time_ms": execution_time_ms,
+            "total_rows": total_rows,
             "created_by": user_id
         })
         
@@ -163,16 +175,23 @@ class MatchingService:
             name=request.name,
             matched=best_match_score,
             found=found,
+            total_rows=total_rows,
+            execution_time_ms=execution_time_ms,
             matched_records=matched_records
         )
-        return self.clean_json(response.dict())
+        return response
 
     async def bulk_search(self, request: BulkSearchRequest, user_id: str) -> BulkSearchResponse:
         """Perform bulk name search"""
         
+        start_time = time.time()
+        
         # Validate task exists
         if not await self.repository.validate_task_exists(request.task_id):
             raise TaskException(f"Task {request.task_id} not found or has no data")
+        
+        # Get total rows count
+        total_rows = await self.repository.get_task_record_count(request.task_id)
         
         # Get CSV data for the specified columns
         data = await self.repository.search_in_columns(
@@ -212,13 +231,19 @@ class MatchingService:
                 best_match=best_match
             ))
         
+        # Calculate execution time
+        end_time = time.time()
+        execution_time_ms = (end_time - start_time) * 1000
+        
         # Prepare summary
         summary = {
             "total_searched": len(request.list),
             "total_found": total_found,
             "total_above_threshold": total_above_threshold,
             "average_confidence": sum(r.matched for r in results) / len(results) if results else 0,
-            "threshold_used": request.threshold
+            "threshold_used": request.threshold,
+            "total_rows": total_rows,
+            "execution_time_ms": execution_time_ms
         }
         
         # Save search history
@@ -231,6 +256,8 @@ class MatchingService:
             "threshold_used": request.threshold,
             "results_found": total_found,
             "total_searched": len(request.list),
+            "execution_time_ms": execution_time_ms,
+            "total_rows": total_rows,
             "created_by": user_id
         })
         
@@ -238,7 +265,7 @@ class MatchingService:
             results=results,
             summary=summary
         )
-        return self.clean_json(response.dict())
+        return response
 
     async def get_available_columns(self, task_id: str) -> AvailableColumnsResponse:
         """Get available columns for a task"""
@@ -251,7 +278,7 @@ class MatchingService:
         
         return AvailableColumnsResponse(
             task_id=task_id,
-            available_columns=column_data["available_columns"],
+            columns=column_data["available_columns"],
             recommended_columns=column_data["recommended_columns"],
             total_records=column_data["total_records"]
         )

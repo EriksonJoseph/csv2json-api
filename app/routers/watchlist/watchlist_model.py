@@ -61,3 +61,29 @@ class WatchlistUpdate(BaseModel):
         populate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
+
+
+# Paginated response model
+class WatchlistPaginatedResponse(BaseModel):
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
+    list: List[dict]
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "total": 2,
+                "page": 1,
+                "per_page": 10,
+                "total_pages": 1,
+                "list": [
+                    {
+                        "_id": "60d21b4967d0d1d8ef43e111",
+                        "title": "My Watchlist",
+                        "list": ["item1", "item2", "item3"]
+                    }
+                ]
+            }
+        }

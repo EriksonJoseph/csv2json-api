@@ -4,6 +4,8 @@ from app.routers.task.task_model import TaskCreate, TaskUpdate
 from app.utils.advanced_performance import tracker
 from app.workers.background_worker import get_current_processing_task
 from app.dependencies.auth import require_user
+from app.api.schemas import PaginationResponse
+from typing import Dict, Any
 
 router = APIRouter(
     prefix="/task",
@@ -30,7 +32,7 @@ async def create_task(task: TaskCreate, current_user = Depends(require_user)):
     """
     return await task_service.create_task(task)
 
-@router.get("/")
+@router.get("/", response_model=PaginationResponse[Dict[str, Any]])
 @tracker.measure_async_time
 async def get_all_tasks(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100), current_user = Depends(require_user)):
     """

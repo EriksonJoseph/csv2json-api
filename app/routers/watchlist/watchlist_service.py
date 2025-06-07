@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from bson import ObjectId
 from app.routers.watchlist.watchlist_repository import WatchlistRepository
 from app.routers.watchlist.watchlist_model import WatchlistModel, WatchlistUpdate
@@ -14,9 +14,9 @@ class WatchlistService:
         return await WatchlistRepository.create_watchlist(data)
     
     @staticmethod
-    async def get_all_watchlists() -> List[Dict[str, Any]]:
-        """Get all watchlists"""
-        return await WatchlistRepository.get_all_watchlists()
+    async def get_all_watchlists(page: int = 1, limit: int = 10) -> Tuple[List[Dict[str, Any]], int]:
+        """Get all watchlists with pagination"""
+        return await WatchlistRepository.get_all_watchlists(page, limit)
     
     @staticmethod
     async def get_watchlist_by_id(id: str) -> Optional[Dict[str, Any]]:

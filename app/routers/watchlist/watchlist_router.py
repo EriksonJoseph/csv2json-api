@@ -4,6 +4,7 @@ from app.routers.watchlist.watchlist_model import WatchlistModel, WatchlistRespo
 from app.routers.watchlist.watchlist_service import WatchlistService
 from app.utils.serializers import list_serial, individual_serial
 from app.dependencies.auth import get_current_user
+from app.api.schemas import PaginationResponse
 
 # Create router
 router = APIRouter(
@@ -38,15 +39,35 @@ async def create_watchlist(
 
 @router.get(
     "/", 
-    response_model=List[WatchlistResponse],
+    response_model=PaginationResponse[WatchlistResponse],
     summary="Get all watchlists"
 )
-async def get_all_watchlists(current_user = Depends(get_current_user)):
+async def get_all_watchlists(
+    page: int = 1,
+    limit: int = 10,
+    current_user = Depends(get_current_user)
+):
     """
-    Retrieve all watchlists
+    Retrieve all watchlists with pagination
     """
-    watchlists = await WatchlistService.get_all_watchlists()
-    return list_serial(watchlists)
+    watchlists, total = await WatchlistService.get_all_watchlists(page, limit)
+    
+    # Format watchlists for response (remove timestamps and keep only necessary fields)
+    formatted_watchlists = []
+    for watchlist in watchlists:
+        formatted_watchlist = {
+            "_id": str(watchlist["_id"]),
+            "title": watchlist["title"],
+            "list": watchlist["list"]
+        }
+        formatted_watchlists.append(formatted_watchlist)
+    
+    return {
+        "list": formatted_watchlists,
+        "total": total,
+        "page": page,
+        "limit": limit
+    }
 
 @router.get(
     "/{id}", 

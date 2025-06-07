@@ -94,7 +94,7 @@ class TaskService:
         """Get all tasks with pagination"""
         tasks, total = await self.task_repository.get_all_tasks(page, limit)
         return {
-            "tasks": tasks,
+            "list": tasks,
             "total": total,
             "page": page,
             "limit": limit

@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 from bson import ObjectId
 from app.database import get_collection
@@ -24,12 +24,21 @@ class WatchlistRepository:
         return None
     
     @staticmethod
-    async def get_all_watchlists() -> List[Dict[str, Any]]:
-        """Get all watchlists"""
+    async def get_all_watchlists(page: int = 1, limit: int = 10) -> Tuple[List[Dict[str, Any]], int]:
+        """Get all watchlists with pagination"""
         collection = await get_collection(WatchlistRepository.COLLECTION_NAME)
-        cursor = collection.find()
-        watchlists = await cursor.to_list(length=100)  # Limit to 100 items
-        return watchlists
+        
+        # Calculate skip for pagination
+        skip = (page - 1) * limit
+        
+        # Count total watchlists
+        total = await collection.count_documents({})
+        
+        # Get watchlists with pagination
+        cursor = collection.find().sort("created_at", -1).skip(skip).limit(limit)
+        watchlists = await cursor.to_list(length=limit)
+        
+        return watchlists, total
     
     @staticmethod
     async def get_watchlist_by_id(id: ObjectId) -> Optional[Dict[str, Any]]:

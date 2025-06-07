@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
-from typing import List
+from typing import Dict, Any
+from app.api.schemas.pagination import PaginationResponse
 from app.routers.matching.matching_service import MatchingService
 from app.routers.matching.matching_model import (
     SingleSearchRequest, BulkSearchRequest, SingleSearchResponse, 
@@ -104,7 +105,7 @@ async def bulk_search(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@router.get("/history", response_model=SearchHistoryResponse)
+@router.get("/history", response_model=PaginationResponse[Dict[str, Any]])
 @tracker.measure_async_time
 async def get_search_history(
     page: int = Query(1, ge=1, description="Page number"),
@@ -120,7 +121,7 @@ async def get_search_history(
         history_data = await matching_service.get_search_history(
             current_user.user_id, page, limit
         )
-        return SearchHistoryResponse(**history_data)
+        return history_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
@@ -154,7 +155,7 @@ async def get_task_stats(
         return {
             "task_id": task_id,
             "total_records": columns_info.total_records,
-            "total_columns": len(columns_info.available_columns),
+            "total_columns": 0,
             "recommended_columns": columns_info.recommended_columns,
             "status": "ready_for_matching"
         }
