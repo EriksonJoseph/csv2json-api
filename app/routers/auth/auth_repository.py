@@ -21,6 +21,9 @@ class AuthRepository:
             sort=[("last_attempt", -1)]
         )
         if attempt:
+            # Remove MongoDB _id field before creating the model
+            if '_id' in attempt:
+                del attempt['_id']
             return LoginAttempt(**attempt)
         return None
 

@@ -22,7 +22,7 @@ async def login(request: Request, user_login: UserLogin):
     🔐 Login
     """
     # Get client IP address
-    ip_address = request.client.host
+    ip_address = request.client.host if request.client else "unknown"
     # Get user agent if available
     user_agent = request.headers.get("user-agent")
     
@@ -86,7 +86,7 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest):
     🔄 Refresh access token using a refresh token
     """
     # Get client information
-    ip_address = request.client.host
+    ip_address = request.client.host if request.client else "unknown"
     
     # Refresh the token
     new_token = await auth_service.refresh_access_token(refresh_request.refresh_token)

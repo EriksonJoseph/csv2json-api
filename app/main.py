@@ -13,6 +13,13 @@ from app.workers.background_worker import start_worker, load_pending_tasks
 # เรียกใช้งาน settings
 settings = get_settings()
 
+# Print all environment variables
+print("🔧 Environment Variables:")
+print("=" * 50)
+for key, value in settings.__dict__.items():
+    print(f"{key}: {value}")
+print("=" * 50)
+
 # สร้าง FastAPI application
 app = FastAPI(
     title=settings.APP_NAME,

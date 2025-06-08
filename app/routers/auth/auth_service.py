@@ -287,7 +287,7 @@ class AuthService:
         user_service = UserService()
         return await user_service.create_user(user)
 
-    async def get_login_history(self, user_id: str) -> LoginAttempt:
+    async def get_login_history(self, user_id: str) -> Optional[LoginAttempt]:
         """
         Get login history for a user
         """
@@ -296,8 +296,8 @@ class AuthService:
     async def verify_token(self, token: str) -> Optional[TokenData]:
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
-            username: str = payload.get("sub")
-            user_id: str = payload.get("user_id")
+            username = payload.get("sub")
+            user_id = payload.get("user_id")
             roles: List[str] = payload.get("roles", [])
             
             if username is None or user_id is None:
