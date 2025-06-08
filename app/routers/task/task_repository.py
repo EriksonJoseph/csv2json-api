@@ -79,17 +79,46 @@ class TaskRepository:
             
         # Get updated task
         updated_task = await self.get_task_by_id(task_id)
+        if updated_task is None:
+            raise ValueError("Task not found after update")
         return updated_task
 
     async def delete_task(self, task_id: str) -> bool:
-        """Delete task"""
-        tasks_collection = await get_collection("tasks")
-        
+        """Delete task and all related documents from all collections"""
         if not ObjectId.is_valid(task_id):
             return False
+        
+        try:
+            # Delete from all collections that contain task_id
+            collections_to_clean = [
+                "tasks",           # Main task collection
+                "csv",             # CSV data
+                "search_history",  # Search history
+                "watchlist",       # Watchlist data
+                # Add other collections as needed
+            ]
             
-        result = await tasks_collection.delete_one({"_id": ObjectId(task_id)})
-        return result.deleted_count > 0
+            total_deleted = 0
+            
+            for collection_name in collections_to_clean:
+                collection = await get_collection(collection_name)
+                
+                if collection_name == "tasks":
+                    # Delete by _id for tasks collection
+                    result = await collection.delete_many({"_id": ObjectId(task_id)})
+                else:
+                    # Delete by task_id for other collections
+                    result = await collection.delete_many({"task_id": task_id})
+                
+                total_deleted += result.deleted_count
+                print(f"Deleted {result.deleted_count} documents from {collection_name}")
+            
+            print(f"Total deleted: {total_deleted} documents related to task_id: {task_id}")
+            return total_deleted > 0
+            
+        except Exception as e:
+            print(f"Error deleting task {task_id}: {str(e)}")
+            return False
 
     async def get_pending_tasks(self) -> List[Dict]:
         """Get all pending tasks (is_done_created_doc=False)"""

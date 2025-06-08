@@ -36,7 +36,12 @@ async def get_current_active_user(current_user: TokenData = Depends(get_current_
 
 def require_roles(required_roles: List[UserRole]):
     def role_checker(current_user: TokenData = Depends(get_current_active_user)) -> TokenData:
-        user_roles = [UserRole(role) for role in current_user.roles]
+        # Map inconsistent role names to correct enum values
+        role_mapping = {"users": "user"}
+        user_roles = []
+        for role in current_user.roles:
+            mapped_role = role_mapping.get(role, role)
+            user_roles.append(UserRole(mapped_role))
         
         # Admin has all permissions
         if UserRole.ADMIN in user_roles:

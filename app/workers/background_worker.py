@@ -58,6 +58,7 @@ async def process_csv_task(task_id: str, file_id: str):
     
     task_repo = TaskRepository()
     file_repo = FileRepository()
+    file_path = None  # Initialize file_path to avoid unbound variable
     
     try:
         # Get file data
@@ -137,8 +138,9 @@ async def process_csv_task(task_id: str, file_id: str):
         
         # Attempt to clean up file (best effort)
         try:
-            if 'file_path' in locals() and os.path.exists(file_path):
+            if file_path and os.path.exists(file_path):
                 os.remove(file_path)
+                logger.info(f"Cleaned up file: {file_path}")
         except Exception as clean_error:
             logger.error(f"Error cleaning up file: {clean_error}")
 

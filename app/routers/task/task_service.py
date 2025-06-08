@@ -73,6 +73,9 @@ class TaskService:
         task_id = await self.task_repository.create_task(task_data)
         created_task = await self.task_repository.get_task_by_id(task_id)
         
+        if created_task is None:
+            raise TaskException("Failed to retrieve created task")
+        
         # Add task to processing queue
         from app.workers.background_worker import add_task_to_queue
         await add_task_to_queue(str(task_id), task.file_id)
