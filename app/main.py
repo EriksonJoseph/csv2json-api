@@ -50,14 +50,14 @@ async def add_process_time_header(request: Request, call_next):
     user_agent = request.headers.get("user-agent", "No User-Agent")
     referer = request.headers.get("referer", "No Referer")
     
-    # print(f"🌐 API Call from:")
-    # print(f"   Origin: {origin}")
-    # print(f"   Host: {host}")
-    # print(f"   Referer: {referer}")
-    # print(f"   User-Agent: {user_agent}")
-    # print(f"   Method: {request.method}")
-    # print(f"   Path: {request.url.path}")
-    # print("=" * 50)
+    print(f"🌐 API Call from:")
+    print(f"   Origin: {origin}")
+    print(f"   Host: {host}")
+    print(f"   Referer: {referer}")
+    print(f"   User-Agent: {user_agent}")
+    print(f"   Method: {request.method}")
+    print(f"   Path: {request.url.path}")
+    print("=" * 50)
     
     response = await call_next(request)
     process_time = time.time() - start_time
