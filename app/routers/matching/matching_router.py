@@ -67,6 +67,7 @@ async def single_search(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+
 @router.post("/bulk-search", response_model=BulkSearchResponse)
 @tracker.measure_async_time
 async def bulk_search(
@@ -105,6 +106,25 @@ async def bulk_search(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+@router.get("/result/{search_id}")
+@tracker.measure_async_time
+async def get_matching_result(
+    search_id: str = Path(..., description="Search ID to get matching result for"),
+    current_user = Depends(require_user)
+):
+    """
+    📊 Get matching result for a specific search history
+    
+    Returns the detailed search result from search_history collection
+    including all search parameters, execution details, and summary statistics.
+    """
+    try:
+        return await matching_service.get_search_result(search_id)
+    except TaskException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    
 @router.get("/history", response_model=PaginationResponse[Dict[str, Any]])
 @tracker.measure_async_time
 async def get_search_history(

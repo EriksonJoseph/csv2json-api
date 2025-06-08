@@ -12,9 +12,10 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 import math
+import pprint
 
 class MatchingService:
-    def clean_json(self, obj):
+    def clean_json(self, obj) -> Any:
         if isinstance(obj, dict):
             return {k: self.clean_json(v) for k, v in obj.items()}
         elif isinstance(obj, list):
@@ -87,7 +88,7 @@ class MatchingService:
 
     async def _search_single_name_in_data(self, query_name: str, columns: List[str], 
                                         data: List[Dict[str, Any]], 
-                                        threshold: int) -> List[MatchedRecord]:
+                                        threshold: int) -> Tuple[str, List[MatchedRecord]]:
         """Search for a single name in the dataset"""
         
         def search_in_thread():
@@ -101,6 +102,7 @@ class MatchingService:
                         
                         if confidence >= threshold:
                             matched_record = MatchedRecord(
+                                query_name=query_name,
                                 confidence=confidence,
                                 matched_column=column,
                                 matched_value=target_value,
@@ -117,7 +119,7 @@ class MatchingService:
         loop = asyncio.get_event_loop()
         matches = await loop.run_in_executor(self.thread_pool, search_in_thread)
         
-        return matches
+        return query_name, matches
 
     async def single_search(self, request: SingleSearchRequest, user_id: str) -> SingleSearchResponse:
         """Perform single name search"""
@@ -141,7 +143,7 @@ class MatchingService:
             raise TaskException("No data found for the specified task")
         
         # Perform search
-        matched_records = await self._search_single_name_in_data(
+        query_name, matched_records = await self._search_single_name_in_data(
             query_name=request.name,
             columns=request.columns,
             data=data,
@@ -156,8 +158,8 @@ class MatchingService:
         best_match_score = matched_records[0].confidence if matched_records else 0.0
         found = len(matched_records) > 0
         
-        # Save search history
-        await self.repository.save_search_history({
+        # Clean data before saving to prevent JSON serialization errors
+        clean_search_data = self.clean_json({
             "search_id": f"single_{request.task_id}_{hash(request.name)}",
             "task_id": request.task_id,
             "search_type": "single",
@@ -168,17 +170,23 @@ class MatchingService:
             "total_searched": 1,
             "execution_time_ms": execution_time_ms,
             "total_rows": total_rows,
+            "matched_records": [self.clean_json(record.dict()) for record in matched_records],
             "created_by": user_id
         })
         
-        response = SingleSearchResponse(
-            name=request.name,
-            matched=best_match_score,
-            found=found,
-            total_rows=total_rows,
-            execution_time_ms=execution_time_ms,
-            matched_records=matched_records
-        )
+        # Save search history
+        search_id = await self.repository.save_search_history(clean_search_data)  # type: ignore
+        
+        response_data = {
+            "name": request.name,
+            "matched": best_match_score,
+            "found": found,
+            "total_rows": total_rows,
+            "execution_time_ms": execution_time_ms,
+            "matched_records": matched_records,
+            "search_id": search_id
+        }
+        response = SingleSearchResponse(**response_data)
         return response
 
     async def bulk_search(self, request: BulkSearchRequest, user_id: str) -> BulkSearchResponse:
@@ -205,19 +213,28 @@ class MatchingService:
         results = []
         total_found = 0
         total_above_threshold = 0
+        best_overall_match_score = 0.0
+        all_matched_records = []
         
         # Process each name in the list
         for name in request.list:
-            matched_records = await self._search_single_name_in_data(
+            query_name, matched_records = await self._search_single_name_in_data(
                 query_name=name,
                 columns=request.columns,
                 data=data,
                 threshold=request.threshold
             )
             
+            # Collect all matched records for saving to history
+            all_matched_records.extend(matched_records)
+            
             best_match_score = matched_records[0].confidence if matched_records else 0.0
             found = len(matched_records) > 0
             best_match = matched_records[0] if matched_records else None
+            
+            # Track the highest score across all searches
+            if best_match_score > best_overall_match_score:
+                best_overall_match_score = best_match_score
             
             if found:
                 total_found += 1
@@ -246,8 +263,8 @@ class MatchingService:
             "execution_time_ms": execution_time_ms
         }
         
-        # Save search history
-        await self.repository.save_search_history({
+        # Clean data before saving to prevent JSON serialization errors
+        clean_search_data = self.clean_json({
             "search_id": f"bulk_{request.task_id}_{hash(str(request.list))}",
             "task_id": request.task_id,
             "search_type": "bulk",
@@ -258,13 +275,20 @@ class MatchingService:
             "total_searched": len(request.list),
             "execution_time_ms": execution_time_ms,
             "total_rows": total_rows,
+            "best_match_score": best_overall_match_score,
+            "matched_records": [self.clean_json(record.dict()) for record in all_matched_records],
             "created_by": user_id
         })
         
-        response = BulkSearchResponse(
-            results=results,
-            summary=summary
-        )
+        # Save search history
+        search_id = await self.repository.save_search_history(clean_search_data)  # type: ignore
+        
+        response_data = {
+            "results": results,
+            "summary": summary,
+            "search_id": search_id
+        }
+        response = BulkSearchResponse(**response_data)
         return response
 
     async def get_available_columns(self, task_id: str) -> AvailableColumnsResponse:
@@ -285,4 +309,14 @@ class MatchingService:
 
     async def get_search_history(self, user_id: str, page: int = 1, limit: int = 10):
         """Get search history for a user"""
-        return await self.repository.get_search_history(user_id, page, limit)
+        history_data = await self.repository.get_search_history(user_id, page, limit)
+        # Clean the data to prevent JSON serialization errors
+        return self.clean_json(history_data)
+
+    async def get_search_result(self, search_id: str):
+        """Get search result by search_id"""
+        result = await self.repository.get_search_result(search_id)
+        if not result:
+            raise TaskException(f"Search result with ID {search_id} not found")
+        # Clean the data to prevent JSON serialization errors
+        return self.clean_json(result)

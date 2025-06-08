@@ -15,6 +15,7 @@ class BulkSearchRequest(BaseModel):
     list: List[str] = Field(description="List of names to search for")
 
 class MatchedRecord(BaseModel):
+    query_name: str = Field(description="The search query name that was used")
     confidence: float = Field(description="Confidence score (0-100)")
     matched_column: str = Field(description="Column name where match was found")
     matched_value: str = Field(description="Actual value that matched")
@@ -28,6 +29,7 @@ class SingleSearchResponse(BaseModel):
     total_rows: int = Field(default=0, description="Search from total rows")
     execution_time_ms: float = Field(default=0.0, description="Totla executed time")
     matched_records: List[MatchedRecord] = Field(default_factory=list)
+    search_id: str = Field(description="MongoDB ObjectId of saved search history")
 
 class BulkSearchItem(BaseModel):
     name: str
@@ -38,6 +40,7 @@ class BulkSearchItem(BaseModel):
 class BulkSearchResponse(BaseModel):
     results: List[BulkSearchItem]
     summary: Dict[str, Any] = Field(description="Summary statistics of the search")
+    search_id: str = Field(description="MongoDB ObjectId of saved search history")
 
 class AvailableColumnsResponse(BaseModel):
     task_id: str

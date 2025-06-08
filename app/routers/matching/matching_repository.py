@@ -115,8 +115,9 @@ class MatchingRepository:
         # Count total records
         total = await collection.count_documents(query)
         
-        # Get paginated results
-        cursor = collection.find(query).sort("created_at", -1).skip(skip).limit(limit)
+        # Get paginated results (exclude matched_records for performance)
+        projection = {"matched_records": 0}
+        cursor = collection.find(query, projection).sort("created_at", -1).skip(skip).limit(limit)
         history = await cursor.to_list(length=limit)
 
         pprint.pprint(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
@@ -141,3 +142,37 @@ class MatchingRepository:
         collection = await get_collection(self.csv_collection_name)
         count = await collection.count_documents({"task_id": task_id})
         return count > 0
+
+    async def get_search_result(self, search_id: str) -> Optional[Dict[str, Any]]:
+        """Get search result by search_id"""
+        collection = await get_collection(self.search_history_collection_name)
+        
+        result = await collection.find_one({"_id": ObjectId(search_id)})
+        if result:
+            to_return = {
+                "_id": result.get("_id", ""),
+                "task_id": result.get("task_id", ''),
+                "total_query_names": len(result.get("query_names", [])),
+                "total_found": len([
+                    name for name in result.get("query_names", [])
+                    if any(matched.get("query_name") == name for matched in result.get("matched_records", []))
+                ]),
+                "execution_time_ms": result.get('execution_time_ms', 0),
+                "threshold_used": result.get("threshold_used", 0),
+                "search_type": result.get('search_type', ''),
+                "columns_used": result.get('columns_used', []),
+                "query_names": result.get("query_names", []),
+                "total_rows": result.get('total_rows', 0),
+                "matched_result": [
+                    {
+                        "query_name": name,
+                        "matched_record_number": len([
+                            item for item in result.get("matched_records", [])
+                            if item.get("query_name") == name
+                        ])
+                    }
+                    for name in result.get("query_names", [])
+                ]
+            }
+            return individual_serial(to_return)
+        return None
