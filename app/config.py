@@ -4,7 +4,7 @@ import os
 
 class Settings(BaseSettings):
     # ตั้งค่าพื้นฐาน
-    APP_NAME: str = "CSV2JSON"
+    APP_NAME: str = "CSV2JSON-API"
     APP_ENV: str = "development"
     APP_DEBUG: bool = True
     APP_PORT: int = 8000
@@ -19,9 +19,13 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_SECRET_KEY: str = "fallback-refresh-secret-key"
     JWT_REFRESH_TOKEN_EXPIRE_MINUTES: int = 1440
+
+    # CORS
+    ALLOW_ORIGIN: str ="*"
     
     class Config:
-        env_file = ".env"  # อ่านค่าจากไฟล์ .env
+        # อ่านไฟล์ .env ตาม environment
+        env_file = ".env"  # กลับไปใช้แบบเดิมก่อน เพื่อให้ compatible กับ pydantic v1
         env_file_encoding = "utf-8"
 
 @lru_cache()
@@ -36,7 +40,8 @@ def get_settings():
             "JWT_ALGORITHM",
             "JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
             "JWT_REFRESH_SECRET_KEY",
-            "JWT_REFRESH_TOKEN_EXPIRE_MINUTES"
+            "JWT_REFRESH_TOKEN_EXPIRE_MINUTES",
+            "ALLOW_ORIGIN"
         ]
         for var in env_vars:
             os.environ.pop(var, None)

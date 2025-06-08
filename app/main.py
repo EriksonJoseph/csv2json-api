@@ -16,17 +16,17 @@ settings = get_settings()
 # สร้าง FastAPI application
 app = FastAPI(
     title=settings.APP_NAME,
-    description="RESTful API for CSV2JSON",
+    description="RESTful API for CSV2JSON-API",
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json"
 )
 
-# เพิ่ม CORS middleware
+# กำหนด allowed origins ตาม environment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ในโปรดักชันควรระบุ domain ที่อนุญาตเท่านั้น
+    allow_origins=[settings.ALLOW_ORIGIN],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,6 +36,22 @@ app.add_middleware(
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = time.time()
+    
+    # Log origin information
+    origin = request.headers.get("origin", "No Origin")
+    host = request.headers.get("host", "No Host")
+    user_agent = request.headers.get("user-agent", "No User-Agent")
+    referer = request.headers.get("referer", "No Referer")
+    
+    # print(f"🌐 API Call from:")
+    # print(f"   Origin: {origin}")
+    # print(f"   Host: {host}")
+    # print(f"   Referer: {referer}")
+    # print(f"   User-Agent: {user_agent}")
+    # print(f"   Method: {request.method}")
+    # print(f"   Path: {request.url.path}")
+    # print("=" * 50)
+    
     response = await call_next(request)
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = str(process_time)

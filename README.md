@@ -124,7 +124,7 @@ Configuration settings are stored in `app/config.py` and loaded from environment
 ### Project Structure
 
 ```
-csv2json/
+csv2json-api/
 ├── app/
 │   ├── dependencies/    # Authentication and other dependencies
 │   ├── exceptions/      # Custom exception classes

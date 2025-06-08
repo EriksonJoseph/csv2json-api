@@ -12,7 +12,7 @@ import os
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Run tests for the CSV2JSON project")
+    parser = argparse.ArgumentParser(description="Run tests for the CSV2JSON-API project")
     
     parser.add_argument("--unit", action="store_true", help="Run only unit tests")
     parser.add_argument("--integration", action="store_true", help="Run only integration tests")
