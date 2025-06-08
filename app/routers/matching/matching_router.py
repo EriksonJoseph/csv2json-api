@@ -4,9 +4,9 @@ from app.api.schemas.pagination import PaginationResponse
 from app.routers.matching.matching_service import MatchingService
 from app.routers.matching.matching_model import (
     SingleSearchRequest, BulkSearchRequest, SingleSearchResponse, 
-    BulkSearchResponse, AvailableColumnsResponse, SearchHistoryResponse
+    BulkSearchResponse, AvailableColumnsResponse
 )
-from app.dependencies.auth import get_current_user, require_user
+from app.dependencies.auth import require_user
 from app.utils.advanced_performance import tracker
 from app.exceptions import TaskException
 

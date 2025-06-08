@@ -1,7 +1,7 @@
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Tuple
 import re
 import time
-from rapidfuzz import fuzz, process
+from rapidfuzz import fuzz
 from app.routers.matching.matching_repository import MatchingRepository
 from app.routers.matching.matching_model import (
     SingleSearchRequest, BulkSearchRequest, SingleSearchResponse, 
@@ -12,7 +12,6 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 import math
-import pprint
 
 class MatchingService:
     def clean_json(self, obj) -> Any:
@@ -143,7 +142,7 @@ class MatchingService:
             raise TaskException("No data found for the specified task")
         
         # Perform search
-        query_name, matched_records = await self._search_single_name_in_data(
+        _, matched_records = await self._search_single_name_in_data(
             query_name=request.name,
             columns=request.columns,
             data=data,
@@ -218,7 +217,7 @@ class MatchingService:
         
         # Process each name in the list
         for name in request.list:
-            query_name, matched_records = await self._search_single_name_in_data(
+            _, matched_records = await self._search_single_name_in_data(
                 query_name=name,
                 columns=request.columns,
                 data=data,

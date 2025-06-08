@@ -3,7 +3,6 @@ from datetime import datetime
 from bson import ObjectId
 from app.database import get_collection
 from app.utils.serializers import list_serial, individual_serial
-import pprint
 
 class MatchingRepository:
     def __init__(self):
@@ -120,10 +119,6 @@ class MatchingRepository:
         cursor = collection.find(query, projection).sort("created_at", -1).skip(skip).limit(limit)
         history = await cursor.to_list(length=limit)
 
-        pprint.pprint(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        pprint.pprint(history[0])
-        list_result = list_serial(history)
-        pprint.pprint(list_result[0])
         
         return {
             "list": list_serial(history),
