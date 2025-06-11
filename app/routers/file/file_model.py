@@ -18,6 +18,10 @@ class FileInfo(BaseModel):
     mime_type: str
     upload_date: datetime
     metadata: Optional[dict] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
 
 class ChunkedUpload(BaseModel):
     upload_id: str
@@ -30,6 +34,8 @@ class ChunkedUpload(BaseModel):
     received_chunks: List[int]
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
 
 class ChunkUploadRequest(BaseModel):
     upload_id: str

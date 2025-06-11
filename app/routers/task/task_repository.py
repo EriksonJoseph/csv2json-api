@@ -6,9 +6,18 @@ from app.utils.serializers import list_serial
 import pprint
 
 class TaskRepository:
-    async def create_task(self, task_data: dict) -> str:
+    async def create_task(self, task_data: dict, user_id: str) -> str:
         """Create a new task in the database"""
         tasks_collection = await get_collection("tasks")
+        
+        # Add audit fields
+        task_data.update({
+            "created_by": user_id,
+            "created_at": datetime.now(),
+            "updated_by": user_id,
+            "updated_at": datetime.now()
+        })
+        
         result = await tasks_collection.insert_one(task_data)
         return str(result.inserted_id)
 
@@ -60,7 +69,7 @@ class TaskRepository:
         
         return task
 
-    async def update_task(self, task_id: str, task_update: dict) -> dict:
+    async def update_task(self, task_id: str, task_update: dict, user_id: str) -> dict:
         """Update task"""
         tasks_collection = await get_collection("tasks")
         
@@ -68,7 +77,15 @@ class TaskRepository:
             raise ValueError("Invalid task_id format")
             
         # Convert Pydantic model to dictionary and filter out None values
-        update_data = {"$set": {k: v for k, v in task_update.items() if v is not None}}
+        update_fields = {k: v for k, v in task_update.items() if v is not None}
+        
+        # Add audit fields
+        update_fields.update({
+            "updated_by": user_id,
+            "updated_at": datetime.now()
+        })
+        
+        update_data = {"$set": update_fields}
         result = await tasks_collection.update_one(
             {"_id": ObjectId(task_id)},
             update_data
@@ -129,7 +146,7 @@ class TaskRepository:
     
     async def update_task_status(self, task_id: str, is_done_created_doc: bool, 
                              column_names: List[str], error_message: Optional[str],
-                             processing_time: Optional[float] = None) -> None:
+                             processing_time: Optional[float] = None, user_id: str = "worker") -> None:
         """Update task status after processing"""
         if not ObjectId.is_valid(task_id):
             raise ValueError("Invalid task_id format")
@@ -139,6 +156,7 @@ class TaskRepository:
         update_data = {
             "is_done_created_doc": is_done_created_doc,
             "column_names": column_names,
+            "updated_by": user_id,
             "updated_at": datetime.now()
         }
         

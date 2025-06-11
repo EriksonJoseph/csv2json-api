@@ -32,7 +32,7 @@ class TaskService:
             cached_files[file_id] = file
         return file
 
-    async def create_task(self, task: TaskCreate) -> dict:
+    async def create_task(self, task: TaskCreate, user_id: str) -> dict:
         """Create a new task with optimized performance"""
         # Validate file_id
         if not ObjectId.is_valid(task.file_id):
@@ -70,7 +70,7 @@ class TaskService:
         }
 
         # Create task
-        task_id = await self.task_repository.create_task(task_data)
+        task_id = await self.task_repository.create_task(task_data, user_id)
         created_task = await self.task_repository.get_task_by_id(task_id)
         
         if created_task is None:
@@ -107,7 +107,7 @@ class TaskService:
         """Get task by ID"""
         return await self.task_repository.get_task_by_id(task_id)
 
-    async def update_task(self, task_id: str, task_update: TaskUpdate) -> dict:
+    async def update_task(self, task_id: str, task_update: TaskUpdate, user_id: str) -> dict:
         """Update task"""
         if task_update.updated_file_date:
             try:
@@ -122,9 +122,8 @@ class TaskService:
 
         # Convert Pydantic model to dictionary
         update_data = task_update.dict(exclude_unset=True)
-        update_data["updated_at"] = datetime.now()
         
-        updated_task = await self.task_repository.update_task(task_id, update_data)
+        updated_task = await self.task_repository.update_task(task_id, update_data, user_id)
         return updated_task
 
     async def delete_task(self, task_id: str) -> bool:

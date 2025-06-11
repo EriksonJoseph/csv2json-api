@@ -83,9 +83,14 @@ async def process_csv_task(task_id: str, file_id: str):
         records = df.to_dict("records")
         
         # Add metadata to each record
+        now = datetime.now()
         for record in records:
             record["task_id"] = task_id
-            record["processed_at"] = datetime.now()
+            record["processed_at"] = now
+            record["created_by"] = "worker"
+            record["created_at"] = now
+            record["updated_by"] = "worker"
+            record["updated_at"] = now
         
         # Insert records in batches to avoid overwhelming MongoDB
         if records:

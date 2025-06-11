@@ -22,7 +22,7 @@ async def upload_file(file: UploadFile = File(...), current_user = Depends(requi
     """
     🚀 อัปโหลดไฟล์และบันทึกลงโฟลเดอร์ temp พร้อมบันทึกข้อมูลลง collection files
     """
-    return await file_service.upload_file(file)
+    return await file_service.upload_file(file, current_user.user_id)
 
 @router.get("/", response_model=PaginationResponse[Dict[str, Any]])
 @tracker.measure_async_time
@@ -62,7 +62,7 @@ async def initiate_chunked_upload(request: InitiateUploadRequest, current_user =
     """
     🚀 เริ่มต้น chunked upload สำหรับไฟล์ขนาดใหญ่
     """
-    return await file_service.initiate_chunked_upload(request)
+    return await file_service.initiate_chunked_upload(request, current_user.user_id)
 
 @router.post("/chunked/{upload_id}/chunk")
 @tracker.measure_async_time

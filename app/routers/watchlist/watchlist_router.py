@@ -29,7 +29,7 @@ async def create_watchlist(
     - **title**: Title of the watchlist
     - **list**: List of items to watch (optional)
     """
-    result = await WatchlistService.create_watchlist(watchlist)
+    result = await WatchlistService.create_watchlist(watchlist, current_user.user_id)
     if not result:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
@@ -50,7 +50,7 @@ async def get_all_watchlists(
     """
     Retrieve all watchlists with pagination
     """
-    watchlists, total = await WatchlistService.get_all_watchlists(page, limit)
+    watchlists, total = await WatchlistService.get_all_watchlists(page, limit, current_user.user_id)
     
     # Format watchlists for response (remove timestamps and keep only necessary fields)
     formatted_watchlists = []
@@ -81,7 +81,7 @@ async def get_watchlist(
     """
     Retrieve a specific watchlist by its ID
     """
-    watchlist = await WatchlistService.get_watchlist_by_id(id)
+    watchlist = await WatchlistService.get_watchlist_by_id(id, current_user.user_id)
     if not watchlist:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
@@ -106,14 +106,14 @@ async def update_watchlist(
     - **list**: New list of items to watch (optional)
     """
     # First check if watchlist exists
-    existing = await WatchlistService.get_watchlist_by_id(id)
+    existing = await WatchlistService.get_watchlist_by_id(id, current_user.user_id)
     if not existing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=f"Watchlist with ID {id} not found"
         )
     
-    updated = await WatchlistService.update_watchlist(id, watchlist_update)
+    updated = await WatchlistService.update_watchlist(id, watchlist_update, current_user.user_id)
     if not updated:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
@@ -134,14 +134,14 @@ async def delete_watchlist(
     Delete a watchlist by its ID
     """
     # First check if watchlist exists
-    existing = await WatchlistService.get_watchlist_by_id(id)
+    existing = await WatchlistService.get_watchlist_by_id(id, current_user.user_id)
     if not existing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=f"Watchlist with ID {id} not found"
         )
     
-    deleted = await WatchlistService.delete_watchlist(id)
+    deleted = await WatchlistService.delete_watchlist(id, current_user.user_id)
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
@@ -165,14 +165,14 @@ async def add_item_to_watchlist(
     - **item**: Item to add to the watchlist
     """
     # First check if watchlist exists
-    existing = await WatchlistService.get_watchlist_by_id(id)
+    existing = await WatchlistService.get_watchlist_by_id(id, current_user.user_id)
     if not existing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=f"Watchlist with ID {id} not found"
         )
     
-    updated = await WatchlistService.add_item_to_watchlist(id, item)
+    updated = await WatchlistService.add_item_to_watchlist(id, item, current_user.user_id)
     if not updated:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
@@ -194,14 +194,14 @@ async def remove_item_from_watchlist(
     Remove a single item from a watchlist's list
     """
     # First check if watchlist exists
-    existing = await WatchlistService.get_watchlist_by_id(id)
+    existing = await WatchlistService.get_watchlist_by_id(id, current_user.user_id)
     if not existing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=f"Watchlist with ID {id} not found"
         )
     
-    updated = await WatchlistService.remove_item_from_watchlist(id, item)
+    updated = await WatchlistService.remove_item_from_watchlist(id, item, current_user.user_id)
     if not updated:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 

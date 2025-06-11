@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import re
 import time
 from rapidfuzz import fuzz
@@ -174,7 +174,7 @@ class MatchingService:
         })
         
         # Save search history
-        search_id = await self.repository.save_search_history(clean_search_data)  # type: ignore
+        search_id = await self.repository.save_search_history(clean_search_data, user_id)
         
         response_data = {
             "name": request.name,
@@ -280,7 +280,7 @@ class MatchingService:
         })
         
         # Save search history
-        search_id = await self.repository.save_search_history(clean_search_data)  # type: ignore
+        search_id = await self.repository.save_search_history(clean_search_data, user_id)
         
         response_data = {
             "results": results,
@@ -290,7 +290,7 @@ class MatchingService:
         response = BulkSearchResponse(**response_data)
         return response
 
-    async def get_available_columns(self, task_id: str) -> AvailableColumnsResponse:
+    async def get_available_columns(self, task_id: str, user_id: Optional[str] = None) -> AvailableColumnsResponse:
         """Get available columns for a task"""
         
         # Validate task exists
@@ -312,7 +312,7 @@ class MatchingService:
         # Clean the data to prevent JSON serialization errors
         return self.clean_json(history_data)
 
-    async def get_search_result(self, search_id: str):
+    async def get_search_result(self, search_id: str, user_id: Optional[str] = None):
         """Get search result by search_id"""
         result = await self.repository.get_search_result(search_id)
         if not result:

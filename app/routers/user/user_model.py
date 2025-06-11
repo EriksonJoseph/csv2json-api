@@ -15,6 +15,10 @@ class User(BaseModel):
     last_login: Optional[datetime] = None
     last_login_ip: Optional[str] = None
     login_history: List[Dict[str, Any]] = Field(default_factory=list)
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
 
 class UserCreate(BaseModel):
     username: str

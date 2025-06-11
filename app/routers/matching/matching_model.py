@@ -62,6 +62,8 @@ class SearchHistoryItem(BaseModel):
     total_rows: int = Field(description="Total rows in the dataset")
     created_at: datetime
     created_by: str = Field(description="User ID who performed the search")
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[str] = None
 
 class SearchHistoryResponse(BaseModel):
     list: List[SearchHistoryItem]

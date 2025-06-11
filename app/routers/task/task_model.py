@@ -20,6 +20,21 @@ class TaskUpdate(BaseModel):
     error_message: Optional[str] = None
     processing_time: Optional[float] = None
 
+class Task(BaseModel):
+    topic: str
+    created_file_date: str
+    updated_file_date: str
+    references: str
+    file_id: str
+    is_done_created_doc: bool = False
+    column_names: List[str] = []
+    error_message: Optional[str] = None
+    processing_time: Optional[float] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
+
 class TaskStatus(BaseModel):
     task_id: str
     is_done_created_doc: bool

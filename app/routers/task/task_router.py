@@ -30,7 +30,7 @@ async def create_task(task: TaskCreate, current_user = Depends(require_user)):
     """
     📋 สร้างงานใหม่
     """
-    return await task_service.create_task(task)
+    return await task_service.create_task(task, current_user.user_id)
 
 @router.get("/", response_model=PaginationResponse[Dict[str, Any]])
 @tracker.measure_async_time
@@ -54,7 +54,7 @@ async def update_task(task_id: str, task_update: TaskUpdate, current_user = Depe
     """
     🔄 อัปเดตข้อมูลงานตาม ID
     """
-    return await task_service.update_task(task_id, task_update)
+    return await task_service.update_task(task_id, task_update, current_user.user_id)
 
 @router.delete("/{task_id}")
 @tracker.measure_async_time

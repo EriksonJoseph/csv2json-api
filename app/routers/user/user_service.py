@@ -10,7 +10,7 @@ class UserService:
     def __init__(self):
         self.user_repository = UserRepository()
 
-    async def create_user(self, user: UserCreate, current_user: Optional[TokenData] = None) -> Dict:
+    async def create_user(self, user: UserCreate, user_id: Optional[str] = None) -> Dict:
         """Create a new user"""
         # Check for duplicate username
         if await self.user_repository.find_by_username(user.username):
@@ -34,9 +34,9 @@ class UserService:
         }
 
         # Create user
-        return await self.user_repository.create(user_data)
+        return await self.user_repository.create(user_data, user_id)
 
-    async def update_user(self, user_id: str, user_update: UserUpdate, current_user: Optional[TokenData] = None) -> Dict:
+    async def update_user(self, user_id: str, user_update: UserUpdate, acting_user_id: Optional[str] = None) -> Dict:
         """Update user information"""
         # Validate user_id
         if not ObjectId.is_valid(user_id):
@@ -59,7 +59,7 @@ class UserService:
                     raise UserException("Username already exists", status_code=400)
 
         # Update user
-        return await self.user_repository.update_user(user_id, {"$set": update_data})
+        return await self.user_repository.update_user(user_id, {"$set": update_data}, acting_user_id)
 
     async def get_user(self, user_id: str) -> Dict:
         """Get user by ID"""

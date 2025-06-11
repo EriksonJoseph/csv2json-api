@@ -6,9 +6,19 @@ from app.utils.serializers import list_serial, individual_serial
 from app.routers.file.file_model import UploadStatus
 
 class FileRepository:
-    async def save_file_metadata(self, file_data: Dict) -> str:
+    async def save_file_metadata(self, file_data: Dict, created_by: str) -> str:
         """Save file metadata to database"""
         files_collection = await get_collection("files")
+        
+        # Add audit fields
+        now = datetime.now()
+        file_data.update({
+            "created_by": created_by,
+            "created_at": now,
+            "updated_by": created_by,
+            "updated_at": now
+        })
+        
         result = await files_collection.insert_one(file_data)
         return str(result.inserted_id)
 
@@ -48,9 +58,16 @@ class FileRepository:
         files_collection = await get_collection("files")
         await files_collection.delete_one({"_id": ObjectId(file_id)})
 
-    async def create_chunked_upload(self, upload_data: Dict) -> str:
+    async def create_chunked_upload(self, upload_data: Dict, created_by: str) -> str:
         """Create new chunked upload session"""
         uploads_collection = await get_collection("chunked_uploads")
+        
+        # Add audit fields
+        upload_data.update({
+            "created_by": created_by,
+            "updated_by": created_by
+        })
+        
         result = await uploads_collection.insert_one(upload_data)
         return str(result.inserted_id)
 
@@ -65,12 +82,19 @@ class FileRepository:
             return individual_serial(upload)
         return None
 
-    async def update_chunked_upload(self, upload_id: str, update_data: Dict) -> bool:
+    async def update_chunked_upload(self, upload_id: str, update_data: Dict, updated_by: str = "worker") -> bool:
         """Update chunked upload session"""
         if not ObjectId.is_valid(upload_id):
             return False
 
         uploads_collection = await get_collection("chunked_uploads")
+        
+        # Add audit fields
+        update_data.update({
+            "updated_by": updated_by,
+            "updated_at": datetime.now()
+        })
+        
         result = await uploads_collection.update_one(
             {"_id": ObjectId(upload_id)},
             {"$set": update_data}
@@ -85,7 +109,7 @@ class FileRepository:
         uploads_collection = await get_collection("chunked_uploads")
         await uploads_collection.delete_one({"_id": ObjectId(upload_id)})
 
-    async def add_received_chunk(self, upload_id: str, chunk_number: int) -> bool:
+    async def add_received_chunk(self, upload_id: str, chunk_number: int, updated_by: str = "worker") -> bool:
         """Add chunk number to received chunks list"""
         if not ObjectId.is_valid(upload_id):
             return False
@@ -95,7 +119,10 @@ class FileRepository:
             {"_id": ObjectId(upload_id)},
             {
                 "$addToSet": {"received_chunks": chunk_number},
-                "$set": {"updated_at": datetime.now()}
+                "$set": {
+                    "updated_at": datetime.now(),
+                    "updated_by": updated_by
+                }
             }
         )
         return result.modified_count > 0

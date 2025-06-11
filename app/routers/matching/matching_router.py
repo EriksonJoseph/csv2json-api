@@ -32,7 +32,7 @@ async def get_available_columns(
     along with recommended columns for name matching.
     """
     try:
-        return await matching_service.get_available_columns(task_id)
+        return await matching_service.get_available_columns(task_id, current_user.user_id)
     except TaskException as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -119,7 +119,7 @@ async def get_matching_result(
     including all search parameters, execution details, and summary statistics.
     """
     try:
-        return await matching_service.get_search_result(search_id)
+        return await matching_service.get_search_result(search_id, current_user.user_id)
     except TaskException as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -154,7 +154,8 @@ async def health_check(current_user = Depends(require_user)):
     return {
         "status": "healthy",
         "service": "matching",
-        "message": "Fuzzy matching service is operational"
+        "message": "Fuzzy matching service is operational",
+        "user": current_user.user_id
     }
 
 @router.get("/stats/{task_id}")
@@ -170,7 +171,7 @@ async def get_task_stats(
     """
     try:
         # Get basic stats
-        columns_info = await matching_service.get_available_columns(task_id)
+        columns_info = await matching_service.get_available_columns(task_id, current_user.user_id)
         
         return {
             "task_id": task_id,

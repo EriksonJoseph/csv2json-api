@@ -95,11 +95,19 @@ class MatchingRepository:
         records = await cursor.to_list(length=None)
         return list_serial(records)
 
-    async def save_search_history(self, search_data: Dict[str, Any]) -> str:
+    async def save_search_history(self, search_data: Dict[str, Any], created_by: str) -> str:
         """Save search history"""
         collection = await get_collection(self.search_history_collection_name)
         
-        search_data["created_at"] = datetime.now()
+        # Add audit fields
+        now = datetime.now()
+        search_data.update({
+            "created_at": now,
+            "created_by": created_by,
+            "updated_at": now,
+            "updated_by": created_by
+        })
+        
         result = await collection.insert_one(search_data)
         return str(result.inserted_id)
 

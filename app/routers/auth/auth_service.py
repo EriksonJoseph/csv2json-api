@@ -225,7 +225,7 @@ class AuthService:
                 "last_login": login_time,
                 "last_login_ip": ip_address
             }
-        })
+        }, user_id)
         
         # Then update the login history array
         await self.user_repository.update_user(user_id, {
@@ -236,7 +236,7 @@ class AuthService:
                     "$slice": 100  # Keep only the last 100 logins
                 }
             }
-        })
+        }, user_id)
 
     async def login(self, user_login: UserLogin, ip_address: str, user_agent: Optional[str] = None) -> Token:
         """

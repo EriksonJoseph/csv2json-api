@@ -12,7 +12,7 @@ class FileService:
     def __init__(self):
         self.file_repository = FileRepository()
 
-    async def upload_file(self, file: UploadFile) -> dict:
+    async def upload_file(self, file: UploadFile, user_id: str = None) -> dict:
         """
         Upload file to temporary storage and save metadata
         
@@ -59,7 +59,7 @@ class FileService:
             }
             
             # Save metadata to database
-            file_id = await self.file_repository.save_file_metadata(file_data)
+            file_id = await self.file_repository.save_file_metadata(file_data, user_id)
             file_data["_id"] = file_id
             
             return file_data
@@ -168,7 +168,7 @@ class FileService:
         except Exception as e:
             raise FileException(f"Failed to delete file: {str(e)}", status_code=500)
 
-    async def initiate_chunked_upload(self, request: InitiateUploadRequest) -> dict:
+    async def initiate_chunked_upload(self, request: InitiateUploadRequest, user_id: str = None) -> dict:
         """
         Initiate chunked upload session
         
@@ -193,7 +193,7 @@ class FileService:
                 "updated_at": datetime.now()
             }
             
-            upload_id = await self.file_repository.create_chunked_upload(upload_data)
+            upload_id = await self.file_repository.create_chunked_upload(upload_data, user_id)
             
             # Create temp directory for chunks
             chunks_dir = os.path.join("temp", "chunks", upload_id)
@@ -325,7 +325,7 @@ class FileService:
                 "metadata": {"chunked_upload_id": upload_id}
             }
             
-            file_id = await self.file_repository.save_file_metadata(file_data)
+            file_id = await self.file_repository.save_file_metadata(file_data, user_id)
             file_data["_id"] = file_id
             
             # Update upload session status

@@ -36,6 +36,8 @@ class WatchlistResponse(WatchlistModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
 
     class Config:
         populate_by_name = True

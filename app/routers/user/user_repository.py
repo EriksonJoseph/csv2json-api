@@ -5,9 +5,18 @@ from app.database import get_collection
 from app.utils.serializers import list_serial, individual_serial
 
 class UserRepository:
-    async def create(self, user_data: Dict) -> Dict:
+    async def create(self, user_data: Dict, created_by: str = "system") -> Dict:
         """Create a new user in the database"""
         users_collection = await get_collection("users")
+        
+        # Add audit fields
+        user_data.update({
+            "created_by": created_by,
+            "created_at": datetime.now(),
+            "updated_by": created_by,
+            "updated_at": datetime.now()
+        })
+        
         result = await users_collection.insert_one(user_data)
         user_data["_id"] = str(result.inserted_id)
         return user_data
@@ -42,13 +51,14 @@ class UserRepository:
             return individual_serial(user)
         return None
 
-    async def update_user(self, user_id: str, update_data: Dict) -> Dict:
+    async def update_user(self, user_id: str, update_data: Dict, updated_by: str) -> Dict:
         """Update user information
         
         Args:
             user_id: The ID of the user to update
             update_data: A dictionary containing the update operations.
                        Must be a MongoDB update operation (e.g., {'$set': {...}}, {'$push': {...}})
+            updated_by: User ID of who is making the update
         """
         if not ObjectId.is_valid(user_id):
             return None
@@ -58,9 +68,18 @@ class UserRepository:
         # Ensure the update operation is valid
         if not any(key.startswith('$') for key in update_data.keys()):
             # If no operators found, wrap in $set
-            update_operation = {"$set": update_data}
+            update_fields = update_data
         else:
-            update_operation = update_data
+            # Extract fields from $set operation if it exists
+            update_fields = update_data.get('$set', {})
+        
+        # Add audit fields
+        update_fields.update({
+            "updated_by": updated_by,
+            "updated_at": datetime.now()
+        })
+        
+        update_operation = {"$set": update_fields}
             
         try:
             result = await users_collection.update_one(

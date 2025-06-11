@@ -22,7 +22,7 @@ async def create_user(user: UserCreate, current_user = Depends(require_admin)):
     """
     📋 สร้างผู้ใช้ใหม่ (เฉพาะ Admin)
     """
-    return await user_service.create_user(user, current_user)
+    return await user_service.create_user(user, current_user.user_id)
 
 @router.patch("/{user_id}")
 @tracker.measure_async_time
@@ -30,7 +30,7 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user = Depe
     """
     อัปเดตข้อมูลผู้ใช้ (เฉพาะ Admin)
     """
-    return await user_service.update_user(user_id, user_update, current_user)
+    return await user_service.update_user(user_id, user_update, current_user.user_id)
 
 @router.get("/{user_id}")
 @tracker.measure_async_time
