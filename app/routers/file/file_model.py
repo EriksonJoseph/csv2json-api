@@ -1,6 +1,13 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+from enum import Enum
+
+class UploadStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 class FileInfo(BaseModel):
     id: str
@@ -11,3 +18,27 @@ class FileInfo(BaseModel):
     mime_type: str
     upload_date: datetime
     metadata: Optional[dict] = None
+
+class ChunkedUpload(BaseModel):
+    upload_id: str
+    original_filename: str
+    total_chunks: int
+    chunk_size: int
+    total_size: int
+    mime_type: str
+    status: UploadStatus
+    received_chunks: List[int]
+    created_at: datetime
+    updated_at: datetime
+
+class ChunkUploadRequest(BaseModel):
+    upload_id: str
+    chunk_number: int
+    total_chunks: int
+    is_last_chunk: bool = False
+
+class InitiateUploadRequest(BaseModel):
+    filename: str
+    total_size: int
+    chunk_size: int
+    mime_type: str
