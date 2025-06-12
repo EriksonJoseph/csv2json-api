@@ -18,7 +18,7 @@ file_service = FileService()
 
 @router.post("/upload")
 @tracker.measure_async_time
-async def upload_file(file: UploadFile = File(...), current_user = Depends(require_user)):
+async def upload_file(file: UploadFile = File(...), current_user: Any = Depends(require_user)) -> Dict[str, Any]:
     """
     🚀 อัปโหลดไฟล์และบันทึกลงโฟลเดอร์ temp พร้อมบันทึกข้อมูลลง collection files
     """
@@ -26,7 +26,7 @@ async def upload_file(file: UploadFile = File(...), current_user = Depends(requi
 
 @router.get("/", response_model=PaginationResponse[Dict[str, Any]])
 @tracker.measure_async_time
-async def get_all_files(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100), current_user = Depends(require_user)):
+async def get_all_files(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100), current_user: Any = Depends(require_user)) -> Dict[str, Any]:
     """
     📋 ดึงรายการไฟล์ทั้งหมด
     """
@@ -34,7 +34,7 @@ async def get_all_files(page: int = Query(1, ge=1), limit: int = Query(10, ge=1,
 
 @router.get("/{file_id}")
 @tracker.measure_async_time
-async def get_file(file_id: str, current_user = Depends(require_user)):
+async def get_file(file_id: str, current_user: Any = Depends(require_user)) -> Dict[str, Any]:
     """
     📝 ดึงข้อมูลไฟล์ตาม ID
     """
@@ -42,7 +42,7 @@ async def get_file(file_id: str, current_user = Depends(require_user)):
 
 @router.delete("/{file_id}")
 @tracker.measure_async_time
-async def delete_file(file_id: str, current_user = Depends(require_user)):
+async def delete_file(file_id: str, current_user: Any = Depends(require_user)) -> bool:
     """
     🗑️ ลบไฟล์ตาม ID
     """
@@ -58,7 +58,7 @@ async def download_file(file_id: str, current_user = Depends(require_user)) -> F
 
 @router.post("/chunked/initiate")
 @tracker.measure_async_time
-async def initiate_chunked_upload(request: InitiateUploadRequest, current_user = Depends(require_user)):
+async def initiate_chunked_upload(request: InitiateUploadRequest, current_user: Any = Depends(require_user)) -> Dict[str, Any]:
     """
     🚀 เริ่มต้น chunked upload สำหรับไฟล์ขนาดใหญ่
     """
@@ -70,8 +70,8 @@ async def upload_chunk(
     upload_id: str,
     chunk_number: int = Form(...),
     chunk: UploadFile = File(...),
-    current_user = Depends(require_user)
-):
+    current_user: Any = Depends(require_user)
+) -> Dict[str, Any]:
     """
     📦 อัปโหลด chunk ของไฟล์
     """
@@ -79,7 +79,7 @@ async def upload_chunk(
 
 @router.get("/chunked/{upload_id}/status")
 @tracker.measure_async_time
-async def get_chunked_upload_status(upload_id: str, current_user = Depends(require_user)):
+async def get_chunked_upload_status(upload_id: str, current_user: Any = Depends(require_user)) -> Dict[str, Any]:
     """
     📊 ตรวจสอบสถานะการอัปโหลดแบบ chunked
     """
@@ -87,7 +87,7 @@ async def get_chunked_upload_status(upload_id: str, current_user = Depends(requi
 
 @router.delete("/chunked/{upload_id}")
 @tracker.measure_async_time
-async def cancel_chunked_upload(upload_id: str, current_user = Depends(require_user)):
+async def cancel_chunked_upload(upload_id: str, current_user: Any = Depends(require_user)) -> bool:
     """
     ❌ ยกเลิกการอัปโหลดแบบ chunked
     """

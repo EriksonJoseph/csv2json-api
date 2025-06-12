@@ -1,10 +1,10 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from datetime import datetime
 from app.database import get_collection
 from app.routers.auth.auth_model import LoginHistory, LoginAttempt
 
 class AuthRepository:
-    async def add_login_history(self, history: LoginHistory):
+    async def add_login_history(self, history: LoginHistory) -> None:
         """
         Add a new login history record
         """
@@ -27,7 +27,7 @@ class AuthRepository:
             return LoginAttempt(**attempt)
         return None
 
-    async def increment_attempts(self, user_id: str, ip_address: str):
+    async def increment_attempts(self, user_id: str, ip_address: str) -> None:
         """
         Increment failed login attempts
         """
@@ -60,7 +60,7 @@ class AuthRepository:
             )
             await login_attempts.insert_one(attempt.dict())
 
-    async def update_lock(self, user_id: str, locked_until: datetime):
+    async def update_lock(self, user_id: str, locked_until: datetime) -> None:
         """
         Update account lock status
         """
@@ -74,7 +74,7 @@ class AuthRepository:
             }
         )
 
-    async def reset_attempts(self, user_id: str):
+    async def reset_attempts(self, user_id: str) -> None:
         """
         Reset login attempts counter
         """
@@ -90,7 +90,7 @@ class AuthRepository:
             }
         )
         
-    async def delete_attempts(self, user_id: str):
+    async def delete_attempts(self, user_id: str) -> None:
         """
         Delete all login attempts for a user
         """

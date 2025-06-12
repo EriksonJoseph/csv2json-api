@@ -1,17 +1,18 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from typing import Dict, Any, Callable, Awaitable
 import os
 import time
 
-from app.config import get_settings
+from app.config import get_settings, Settings
 from app.database import initialize_db
 from app.routers import router
 from app.utils.advanced_performance import tracker
 from app.workers.background_worker import start_worker, load_pending_tasks
 
 # เรียกใช้งาน settings
-settings = get_settings()
+settings: Settings = get_settings()
 
 # Print all environment variables
 print("🔧 Environment Variables:")
@@ -41,14 +42,14 @@ app.add_middleware(
 
 # เพิ่ม middleware สำหรับบันทึกเวลาที่ใช้ในการประมวลผล
 @app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
-    start_time = time.time()
+async def add_process_time_header(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    start_time: float = time.time()
     
     # Log origin information
-    origin = request.headers.get("origin", "No Origin")
-    host = request.headers.get("host", "No Host")
-    user_agent = request.headers.get("user-agent", "No User-Agent")
-    referer = request.headers.get("referer", "No Referer")
+    origin: str = request.headers.get("origin", "No Origin")
+    host: str = request.headers.get("host", "No Host")
+    user_agent: str = request.headers.get("user-agent", "No User-Agent")
+    referer: str = request.headers.get("referer", "No Referer")
     
     print(f"🌐 API Call from:")
     print(f"   Origin: {origin}")
@@ -59,15 +60,15 @@ async def add_process_time_header(request: Request, call_next):
     print(f"   Path: {request.url.path}")
     print("=" * 50)
     
-    response = await call_next(request)
-    process_time = time.time() - start_time
+    response: Response = await call_next(request)
+    process_time: float = time.time() - start_time
     response.headers["X-Process-Time"] = str(process_time)
     return response
 
 
 # สร้าง route หลัก
 @app.get("/")
-async def root():
+async def root() -> Dict[str, Any]:
     return {
         "message": f"ยินดีต้อนรับสู่ {settings.APP_NAME} API",
         "docs": "/api/docs",
@@ -79,13 +80,13 @@ app.include_router(router, prefix="/api")
 
 # สร้าง route สำหรับดู performance statistics
 @app.get("/api/performance")
-async def get_performance_stats():
-    stats = tracker.get_stats()
+async def get_performance_stats() -> Dict[str, Any]:
+    stats: Dict[str, Any] = tracker.get_stats()
     return stats
 
 # จัดการ startup event
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     # เชื่อมต่อกับ MongoDB
     await initialize_db()
 
@@ -97,7 +98,7 @@ async def startup_event():
 
 # จัดการ shutdown event
 @app.on_event("shutdown")
-async def shutdown_event():
+async def shutdown_event() -> None:
     # บันทึกข้อมูล performance ก่อนปิด app
     try:
         tracker.export_to_json("logs/performance_final.json")
@@ -112,5 +113,5 @@ handler = app
 # รัน server ถ้าเรียกไฟล์นี้โดยตรง
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("APP_PORT", 8000))
+    port: int = int(os.getenv("APP_PORT", 8000))
     uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)

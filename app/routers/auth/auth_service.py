@@ -1,7 +1,7 @@
 import os
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.routers.auth.auth_model import Token, TokenData, UserLogin, RefreshTokenRequest, RefreshToken, LoginHistory, LoginAttempt, LoginSettings
@@ -9,24 +9,24 @@ from app.routers.user.user_model import UserCreate
 from app.routers.auth.auth_repository import AuthRepository
 from app.routers.user.user_repository import UserRepository
 from app.exceptions import UserException
-from app.config import get_settings
+from app.config import get_settings, Settings
 from app.utils.performance import measure_time
 
 class AuthService:
-    def __init__(self):
-        settings = get_settings()
-        self.user_repository = UserRepository()
-        self.auth_repository = AuthRepository()
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        self.SECRET_KEY = settings.JWT_SECRET_KEY
-        self.REFRESH_SECRET_KEY = settings.JWT_REFRESH_SECRET_KEY
-        self.ALGORITHM = settings.JWT_ALGORITHM
-        self.ACCESS_TOKEN_EXPIRE_MINUTES = int(settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
-        self.REFRESH_TOKEN_EXPIRE_MINUTES = int(settings.JWT_REFRESH_TOKEN_EXPIRE_MINUTES)
+    def __init__(self) -> None:
+        settings: Settings = get_settings()
+        self.user_repository: UserRepository = UserRepository()
+        self.auth_repository: AuthRepository = AuthRepository()
+        self.pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        self.SECRET_KEY: str = settings.JWT_SECRET_KEY
+        self.REFRESH_SECRET_KEY: str = settings.JWT_REFRESH_SECRET_KEY
+        self.ALGORITHM: str = settings.JWT_ALGORITHM
+        self.ACCESS_TOKEN_EXPIRE_MINUTES: int = int(settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+        self.REFRESH_TOKEN_EXPIRE_MINUTES: int = int(settings.JWT_REFRESH_TOKEN_EXPIRE_MINUTES)
         
         # In-memory storage for refresh tokens
         # In production, this should be replaced with a database storage
-        self.refresh_tokens = {}
+        self.refresh_tokens: Dict[str, RefreshToken] = {}
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return self.pwd_context.verify(plain_password, hashed_password)
@@ -34,26 +34,26 @@ class AuthService:
     def get_password_hash(self, password: str) -> str:
         return self.pwd_context.hash(password)
 
-    def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
-        to_encode = data.copy()
+    def create_access_token(self, data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
+        to_encode: Dict[str, Any] = data.copy()
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire: datetime = datetime.utcnow() + expires_delta
         else:
             expire = datetime.utcnow() + timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
         
         to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
+        encoded_jwt: str = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return encoded_jwt
         
     def create_refresh_token(self, user_id: str, ip_address: str, user_agent: Optional[str] = None) -> str:
         # Generate a unique token
-        token = str(uuid.uuid4())
+        token: str = str(uuid.uuid4())
         
         # Calculate expiration time
-        expires_at = datetime.utcnow() + timedelta(minutes=self.REFRESH_TOKEN_EXPIRE_MINUTES)
+        expires_at: datetime = datetime.utcnow() + timedelta(minutes=self.REFRESH_TOKEN_EXPIRE_MINUTES)
         
         # Create refresh token object
-        refresh_token = RefreshToken(
+        refresh_token: RefreshToken = RefreshToken(
             user_id=user_id,
             token=token,
             expires_at=expires_at,
@@ -68,7 +68,7 @@ class AuthService:
         
     def verify_refresh_token(self, token: str) -> Optional[RefreshToken]:
         # Check if token exists in storage
-        refresh_token = self.refresh_tokens.get(token)
+        refresh_token: Optional[RefreshToken] = self.refresh_tokens.get(token)
         if not refresh_token:
             return None
             
@@ -79,7 +79,7 @@ class AuthService:
         return refresh_token
         
     def revoke_refresh_token(self, token: str) -> bool:
-        refresh_token = self.refresh_tokens.get(token)
+        refresh_token: Optional[RefreshToken] = self.refresh_tokens.get(token)
         if not refresh_token:
             return False
             
@@ -91,18 +91,18 @@ class AuthService:
         return True
         
     async def refresh_access_token(self, refresh_token: str) -> Optional[Token]:
-        token_data = self.verify_refresh_token(refresh_token)
+        token_data: Optional[RefreshToken] = self.verify_refresh_token(refresh_token)
         if not token_data:
             return None
             
         # Get user
-        user = await self.user_repository.find_by_id(token_data.user_id)
+        user: Optional[Dict[str, Any]] = await self.user_repository.find_by_id(token_data.user_id)
         if not user:
             return None
             
         # Create new access token
-        access_token_expires = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = self.create_access_token(
+        access_token_expires: timedelta = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token: str = self.create_access_token(
             data={
                 "sub": user["username"],
                 "user_id": str(user["_id"]),
@@ -119,7 +119,7 @@ class AuthService:
             refresh_expires_in=self.REFRESH_TOKEN_EXPIRE_MINUTES * 60
         )
 
-    async def authenticate_user(self, username: str, password: str, ip_address: str) -> Optional[dict]:
+    async def authenticate_user(self, username: str, password: str, ip_address: str) -> Optional[Dict[str, Any]]:
        """
        Authenticate user and track login attempts
        """
@@ -127,22 +127,22 @@ class AuthService:
        await self.record_login_attempt(username, ip_address, False, "Starting authentication")
        
        # Get user
-       user = await self.user_repository.find_by_username(username, include_password=True)
+       user: Optional[Dict[str, Any]] = await self.user_repository.find_by_username(username, include_password=True)
        
        if not user:
            await self.record_login_attempt(username, ip_address, False, "User not found")
            return None
            
        # Check if user is locked
-       user_id = str(user["_id"])
-       is_locked = await self.is_user_locked(user_id)
+       user_id: str = str(user["_id"])
+       is_locked: bool = await self.is_user_locked(user_id)
        
        if is_locked:
            await self.record_login_attempt(username, ip_address, False, "Account locked")
            raise UserException("Account is locked due to too many failed attempts", status_code=401)
            
        # Verify password
-       password_verified = self.verify_password(password, user["password"])
+       password_verified: bool = self.verify_password(password, user["password"])
        
        if not password_verified:
            # Record failed attempt and increment counter
@@ -189,7 +189,7 @@ class AuthService:
         # Account is locked
         return True
 
-    async def record_login_attempt(self, username: str, ip_address: str, success: bool, reason: Optional[str] = None):
+    async def record_login_attempt(self, username: str, ip_address: str, success: bool, reason: Optional[str] = None) -> None:
         """
         Record a login attempt in both login history and user's login history
         """
@@ -208,7 +208,7 @@ class AuthService:
         # Store in login_history collection
         await self.auth_repository.add_login_history(history)
 
-    async def update_user_last_login(self, user_id: str, ip_address: str):
+    async def update_user_last_login(self, user_id: str, ip_address: str) -> None:
         """
         Update user's last login timestamp, IP address, and add to login history
         """
@@ -275,7 +275,7 @@ class AuthService:
             refresh_expires_in=self.REFRESH_TOKEN_EXPIRE_MINUTES * 60
         )
 
-    async def register(self, user: UserCreate) -> Dict:
+    async def register(self, user: UserCreate) -> Dict[str, Any]:
         """
         Register a new user
         """

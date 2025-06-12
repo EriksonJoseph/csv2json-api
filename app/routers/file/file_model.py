@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
 
@@ -17,7 +17,7 @@ class FileInfo(BaseModel):
     file_size: int
     mime_type: str
     upload_date: datetime
-    metadata: Optional[dict] = None
+    metadata: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     created_by: Optional[str] = None

@@ -23,8 +23,8 @@ matching_service = MatchingService()
 @tracker.measure_async_time
 async def get_available_columns(
     task_id: str = Path(..., description="Task ID to get columns for"),
-    current_user = Depends(require_user)
-):
+    current_user: Any = Depends(require_user)
+) -> AvailableColumnsResponse:
     """
     📋 Get available columns for fuzzy matching
     
@@ -42,8 +42,8 @@ async def get_available_columns(
 @tracker.measure_async_time
 async def single_search(
     request: SingleSearchRequest,
-    current_user = Depends(require_user)
-):
+    current_user: Any = Depends(require_user)
+) -> SingleSearchResponse:
     """
     🔍 Search for a single name using fuzzy matching
     
@@ -72,8 +72,8 @@ async def single_search(
 @tracker.measure_async_time
 async def bulk_search(
     request: BulkSearchRequest,
-    current_user = Depends(require_user)
-):
+    current_user: Any = Depends(require_user)
+) -> BulkSearchResponse:
     """
     🔍 Search for multiple names using fuzzy matching
     
@@ -110,8 +110,8 @@ async def bulk_search(
 @tracker.measure_async_time
 async def get_matching_result(
     search_id: str = Path(..., description="Search ID to get matching result for"),
-    current_user = Depends(require_user)
-):
+    current_user: Any = Depends(require_user)
+) -> Dict[str, Any]:
     """
     📊 Get matching result for a specific search history
     
@@ -130,8 +130,8 @@ async def get_matching_result(
 async def get_search_history(
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(10, ge=1, le=100, description="Items per page"),
-    current_user = Depends(require_user)
-):
+    current_user: Any = Depends(require_user)
+) -> Dict[str, Any]:
     """
     📜 Get search history for the current user
     
@@ -147,7 +147,7 @@ async def get_search_history(
 
 @router.get("/health")
 @tracker.measure_async_time
-async def health_check(current_user = Depends(require_user)):
+async def health_check(current_user: Any = Depends(require_user)) -> Dict[str, Any]:
     """
     🏥 Health check for matching service
     """
@@ -162,8 +162,8 @@ async def health_check(current_user = Depends(require_user)):
 @tracker.measure_async_time
 async def get_task_stats(
     task_id: str = Path(..., description="Task ID to get statistics for"),
-    current_user = Depends(require_user)
-):
+    current_user: Any = Depends(require_user)
+) -> Dict[str, Any]:
     """
     📊 Get statistics for a specific task
     

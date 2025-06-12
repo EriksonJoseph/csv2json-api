@@ -110,16 +110,10 @@ async def auth_service(mock_db):
     """Create an AuthService with mocked dependencies."""
     # The repositories will use the mocked database from the mock_db fixture
     # which is already set up to use mongomock
-    from app.routers.user.user_repository import UserRepository
-    from app.routers.auth.auth_repository import AuthRepository as LoginRepository
     from app.routers.auth.auth_service import AuthService
     
-    # Create new instances for each test to avoid state leakage
-    user_repo = UserRepository()
-    login_repo = LoginRepository()
-    
-    # Initialize the auth service with the repositories
-    auth_svc = AuthService(user_repo, login_repo)
+    # Initialize the auth service (no parameters needed)
+    auth_svc = AuthService()
     
     # Ensure the database is properly set up
     await mock_db.users.create_index("username", unique=True)
@@ -146,7 +140,7 @@ async def login_repository(mock_db):
 @pytest_asyncio.fixture
 async def test_user(auth_service):
     """Create a test user for authentication tests."""
-    from app.models.user import UserCreate
+    from app.routers.user.user_model import UserCreate
     
     user = UserCreate(
         username="testuser",

@@ -1,5 +1,6 @@
 from pydantic import BaseSettings
 from functools import lru_cache
+from typing import Dict, Any, List
 import os
 
 class Settings(BaseSettings):
@@ -29,11 +30,11 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 @lru_cache()
-def get_settings():
+def get_settings() -> Settings:
     # ตรวจสอบและรีโหลด settings ถ้ามีการเปลี่ยนแปลงในไฟล์ .env
     if os.path.exists(".env"):
         # ลบค่า environment variables ทั้งหมดที่กำหนดใน .env
-        env_vars = [
+        env_vars: List[str] = [
             "MONGODB_URI",
             "MONGODB_DB",
             "JWT_SECRET_KEY",

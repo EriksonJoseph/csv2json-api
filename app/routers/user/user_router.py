@@ -5,7 +5,7 @@ from app.utils.advanced_performance import tracker
 from app.dependencies.auth import require_admin, require_user, get_current_user
 from bson import ObjectId
 from app.api.schemas import PaginationResponse
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 router = APIRouter(
     prefix="/user",
@@ -18,7 +18,7 @@ user_service = UserService()
 
 @router.post("/")
 @tracker.measure_async_time
-async def create_user(user: UserCreate, current_user = Depends(require_admin)):
+async def create_user(user: UserCreate, current_user: Any = Depends(require_admin)) -> Dict[str, Any]:
     """
     📋 สร้างผู้ใช้ใหม่ (เฉพาะ Admin)
     """
@@ -26,7 +26,7 @@ async def create_user(user: UserCreate, current_user = Depends(require_admin)):
 
 @router.patch("/{user_id}")
 @tracker.measure_async_time
-async def update_user(user_id: str, user_update: UserUpdate, current_user = Depends(require_admin)):
+async def update_user(user_id: str, user_update: UserUpdate, current_user: Any = Depends(require_admin)) -> Optional[Dict[str, Any]]:
     """
     อัปเดตข้อมูลผู้ใช้ (เฉพาะ Admin)
     """
@@ -36,8 +36,8 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user = Depe
 @tracker.measure_async_time
 async def get_user(
     user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการดึงข้อมูล"),
-    current_user = Depends(require_user)
-):
+    current_user: Any = Depends(require_user)
+) -> Dict[str, Any]:
     """
     ดึงข้อมูลผู้ใช้ตาม ID
     """
@@ -52,8 +52,8 @@ async def get_user(
 async def get_all_users(
     page: int = Query(1, ge=1), 
     limit: int = Query(10, ge=1, le=100),
-    current_user = Depends(require_user)
-):
+    current_user: Any = Depends(require_user)
+) -> Dict[str, Any]:
     """
     ดึงรายการผู้ใช้
     - Admin: ดูได้ทุกคน
@@ -75,7 +75,7 @@ async def get_all_users(
 
 @router.delete("/{user_id}")
 @tracker.measure_async_time
-async def delete_user(user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการลบ"), current_user = Depends(require_admin)):
+async def delete_user(user_id: str = Path(..., description="ID ของผู้ใช้ที่ต้องการลบ"), current_user: Any = Depends(require_admin)) -> Dict[str, Any]:
     """
     ลบผู้ใช้ (เฉพาะ Admin)
     """

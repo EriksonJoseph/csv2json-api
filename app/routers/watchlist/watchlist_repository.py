@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime
-from bson import ObjectId
+from datetime import datetime, timezone
+from bson import ObjectId  # type: ignore
 from app.database import get_collection
 
 class WatchlistRepository:
@@ -9,10 +9,10 @@ class WatchlistRepository:
     COLLECTION_NAME = "watchlist"
     
     @staticmethod
-    async def create_watchlist(data: Dict[str, Any], created_by: str) -> Dict[str, Any]:
+    async def create_watchlist(data: Dict[str, Any], created_by: str) -> Optional[Dict[str, Any]]:
         """Create a new watchlist"""
         # Add timestamps and audit fields
-        now = datetime.utcnow()
+        now: datetime = datetime.now(timezone.utc)
         data["created_at"] = now
         data["updated_at"] = now
         data["created_by"] = created_by
@@ -23,7 +23,8 @@ class WatchlistRepository:
         
         # Get the created document
         if result.inserted_id:
-            return await WatchlistRepository.get_watchlist_by_id(result.inserted_id)
+            created_doc: Optional[Dict[str, Any]] = await WatchlistRepository.get_watchlist_by_id(result.inserted_id)
+            return created_doc
         return None
     
     @staticmethod
@@ -53,7 +54,7 @@ class WatchlistRepository:
     async def update_watchlist(id: ObjectId, data: Dict[str, Any], updated_by: str) -> Optional[Dict[str, Any]]:
         """Update an existing watchlist"""
         # Add updated timestamp and audit field
-        data["updated_at"] = datetime.utcnow()
+        data["updated_at"] = datetime.now(timezone.utc)
         data["updated_by"] = updated_by
         
         collection = await get_collection(WatchlistRepository.COLLECTION_NAME)
@@ -82,7 +83,7 @@ class WatchlistRepository:
             {
                 "$addToSet": {"list": item},
                 "$set": {
-                    "updated_at": datetime.utcnow(),
+                    "updated_at": datetime.now(timezone.utc),
                     "updated_by": updated_by
                 }
             }
@@ -101,7 +102,7 @@ class WatchlistRepository:
             {
                 "$pull": {"list": item},
                 "$set": {
-                    "updated_at": datetime.utcnow(),
+                    "updated_at": datetime.now(timezone.utc),
                     "updated_by": updated_by
                 }
             }

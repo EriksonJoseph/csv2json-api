@@ -1,6 +1,7 @@
 from pymongo import MongoClient
-from app.config import get_settings
-from motor.motor_asyncio import AsyncIOMotorClient
+from app.config import get_settings, Settings
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorCollection
+from typing import Optional, Dict, Any
 import logging
 from datetime import datetime
 
@@ -13,16 +14,16 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger("background_worker")
+logger: logging.Logger = logging.getLogger("background_worker")
 
 
 
 # สร้างตัวแปร global เพื่อเก็บ client ไว้ใช้งานต่อ
-_client = None
+_client: Optional[AsyncIOMotorClient] = None
 
-settings = get_settings()
+settings: Settings = get_settings()
 
-async def get_client():
+async def get_client() -> AsyncIOMotorClient:
     global _client
     if _client is None:
         # คอนฟิกการเชื่อมต่อ (ปรับตามความเหมาะสม)
@@ -34,16 +35,16 @@ async def get_client():
         )
     return _client
 
-async def get_database():
+async def get_database() -> AsyncIOMotorDatabase:
     client = await get_client()
     return client[settings.MONGODB_DB]
     
-async def get_collection(collection_name: str):
+async def get_collection(collection_name: str) -> AsyncIOMotorCollection:
     db = await get_database()
     return db[collection_name]
 
 # เชื่อมต่อ MongoDB และเตรียม collection สำหรับ Entity
-async def initialize_db():
+async def initialize_db() -> bool:
     try:
         client = AsyncIOMotorClient(settings.MONGODB_URI)
         db = client[settings.MONGODB_DB]
@@ -63,7 +64,7 @@ async def initialize_db():
             from app.routers.auth.auth_service import AuthService
             auth_service = AuthService()
             
-            admin_data = {
+            admin_data: Dict[str, Any] = {
                 "username": "admin",
                 "password": auth_service.get_password_hash("ThisIsAdmin"),
                 "email": "admin@email.com",

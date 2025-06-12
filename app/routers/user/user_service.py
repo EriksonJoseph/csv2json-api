@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from datetime import datetime
 from bson import ObjectId
 from app.routers.user.user_repository import UserRepository
@@ -7,10 +7,10 @@ from app.exceptions import UserException
 from app.routers.auth.auth_model import TokenData
 
 class UserService:
-    def __init__(self):
-        self.user_repository = UserRepository()
+    def __init__(self) -> None:
+        self.user_repository: UserRepository = UserRepository()
 
-    async def create_user(self, user: UserCreate, user_id: Optional[str] = None) -> Dict:
+    async def create_user(self, user: UserCreate, user_id: Optional[str] = None) -> Dict[str, Any]:
         """Create a new user"""
         # Check for duplicate username
         if await self.user_repository.find_by_username(user.username):
@@ -36,7 +36,7 @@ class UserService:
         # Create user
         return await self.user_repository.create(user_data, user_id)
 
-    async def update_user(self, user_id: str, user_update: UserUpdate, acting_user_id: Optional[str] = None) -> Dict:
+    async def update_user(self, user_id: str, user_update: UserUpdate, acting_user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Update user information"""
         # Validate user_id
         if not ObjectId.is_valid(user_id):
@@ -61,7 +61,7 @@ class UserService:
         # Update user
         return await self.user_repository.update_user(user_id, {"$set": update_data}, acting_user_id)
 
-    async def get_user(self, user_id: str) -> Dict:
+    async def get_user(self, user_id: str) -> Dict[str, Any]:
         """Get user by ID"""
         if not ObjectId.is_valid(user_id):
             raise UserException("Invalid user_id format", status_code=400)
@@ -71,6 +71,6 @@ class UserService:
             raise UserException("User not found", status_code=404)
         return user
 
-    async def get_all_users(self, page: int = 1, limit: int = 10) -> Dict:
+    async def get_all_users(self, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         """Get all users with pagination"""
         return await self.user_repository.get_all_users(page, limit)

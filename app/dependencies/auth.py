@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import List
+from typing import List, Callable
 from app.routers.auth.auth_service import AuthService
 from app.routers.auth.auth_model import TokenData, UserRole
 from app.exceptions import UserException
@@ -34,7 +34,7 @@ async def get_current_active_user(current_user: TokenData = Depends(get_current_
         )
     return current_user
 
-def require_roles(required_roles: List[UserRole]):
+def require_roles(required_roles: List[UserRole]) -> Callable[[TokenData], TokenData]:
     def role_checker(current_user: TokenData = Depends(get_current_active_user)) -> TokenData:
         # Map inconsistent role names to correct enum values
         role_mapping = {"users": "user"}

@@ -3,16 +3,17 @@ import shutil
 import uuid
 from datetime import datetime
 from fastapi import UploadFile
+from typing import Dict, Any, Optional, List, BinaryIO
 from fastapi.responses import FileResponse
 from app.routers.file.file_repository import FileRepository
 from app.routers.file.file_model import UploadStatus, InitiateUploadRequest
 from app.exceptions import FileException
 
 class FileService:
-    def __init__(self):
-        self.file_repository = FileRepository()
+    def __init__(self) -> None:
+        self.file_repository: FileRepository = FileRepository()
 
-    async def upload_file(self, file: UploadFile, user_id: str = None) -> dict:
+    async def upload_file(self, file: UploadFile, user_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Upload file to temporary storage and save metadata
         
@@ -30,21 +31,21 @@ class FileService:
 
         try:
             # Create temp folder if it doesn't exist
-            temp_folder = "temp"
+            temp_folder: str = "temp"
             os.makedirs(temp_folder, exist_ok=True)
             
             # Create new filename with timestamp
-            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            file_extension = os.path.splitext(file.filename)[1]
-            new_filename = f"{timestamp}_{file.filename}"
-            file_path = os.path.join(temp_folder, new_filename)
+            timestamp: str = datetime.now().strftime("%Y%m%d%H%M%S")
+            file_extension: str = os.path.splitext(file.filename)[1]
+            new_filename: str = f"{timestamp}_{file.filename}"
+            file_path: str = os.path.join(temp_folder, new_filename)
             
             # Save file
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             
             # Get file size
-            file_size = os.path.getsize(file_path)
+            file_size: int = os.path.getsize(file_path)
             
             # Prepare file metadata
             file_data = {
@@ -67,7 +68,7 @@ class FileService:
         except Exception as e:
             raise FileException(f"Failed to upload file: {str(e)}", status_code=500)
 
-    async def get_all_files(self, page: int = 1, limit: int = 10) -> dict:
+    async def get_all_files(self, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         """
         Get all files with pagination
         
@@ -118,7 +119,7 @@ class FileService:
         except Exception as e:
             raise FileException(f"Failed to download file: {str(e)}", status_code=500)
 
-    async def get_file_by_id(self, file_id: str) -> dict:
+    async def get_file_by_id(self, file_id: str) -> Dict[str, Any]:
         """
         Get file metadata by ID
         
@@ -168,7 +169,7 @@ class FileService:
         except Exception as e:
             raise FileException(f"Failed to delete file: {str(e)}", status_code=500)
 
-    async def initiate_chunked_upload(self, request: InitiateUploadRequest, user_id: str = None) -> dict:
+    async def initiate_chunked_upload(self, request: InitiateUploadRequest, user_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Initiate chunked upload session
         
@@ -209,7 +210,7 @@ class FileService:
         except Exception as e:
             raise FileException(f"Failed to initiate chunked upload: {str(e)}", status_code=500)
 
-    async def upload_chunk(self, upload_id: str, chunk_number: int, chunk_data: UploadFile) -> dict:
+    async def upload_chunk(self, upload_id: str, chunk_number: int, chunk_data: UploadFile) -> Dict[str, Any]:
         """
         Upload a single chunk
         
@@ -277,7 +278,7 @@ class FileService:
         except Exception as e:
             raise FileException(f"Failed to upload chunk: {str(e)}", status_code=500)
 
-    async def _finalize_chunked_upload(self, upload_id: str) -> dict:
+    async def _finalize_chunked_upload(self, upload_id: str) -> Dict[str, Any]:
         """
         Finalize chunked upload by combining all chunks
         
@@ -325,7 +326,7 @@ class FileService:
                 "metadata": {"chunked_upload_id": upload_id}
             }
             
-            file_id = await self.file_repository.save_file_metadata(file_data, user_id)
+            file_id = await self.file_repository.save_file_metadata(file_data, upload_session.get("created_by", "system"))
             file_data["_id"] = file_id
             
             # Update upload session status
@@ -353,7 +354,7 @@ class FileService:
             )
             raise FileException(f"Failed to finalize chunked upload: {str(e)}", status_code=500)
 
-    async def get_chunked_upload_status(self, upload_id: str) -> dict:
+    async def get_chunked_upload_status(self, upload_id: str) -> Dict[str, Any]:
         """
         Get chunked upload status
         

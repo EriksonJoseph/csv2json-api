@@ -18,16 +18,16 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger("background_worker")
+logger: logging.Logger = logging.getLogger("background_worker")
 
 # Global task queue
-task_queue = asyncio.Queue()
-is_worker_running = False
+task_queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
+is_worker_running: bool = False
 
 # Global variable to track current task
-_current_task = None
+_current_task: Optional[str] = None
 
-async def get_current_processing_task() -> Optional[dict]:
+async def get_current_processing_task() -> Optional[Dict[str, Any]]:
     """
     Get current processing task information
     
@@ -43,22 +43,22 @@ async def get_current_processing_task() -> Optional[dict]:
         "status": "processing"
     }
 
-async def process_csv_task(task_id: str, file_id: str):
+async def process_csv_task(task_id: str, file_id: str) -> None:
     """
     Process a CSV file and insert data into MongoDB
     
     Args:
-        task_id: ID of the task
+        task_id: ID of the task to process
         file_id: ID of the file to process
     """
     global _current_task
     _current_task = task_id
-    start_time = datetime.now()
+    start_time: datetime = datetime.now()
     logger.info(f"Processing task {task_id} with file {file_id}")
     
-    task_repo = TaskRepository()
-    file_repo = FileRepository()
-    file_path = None  # Initialize file_path to avoid unbound variable
+    task_repo: TaskRepository = TaskRepository()
+    file_repo: FileRepository = FileRepository()
+    file_path: Optional[str] = None  # Initialize file_path to avoid unbound variable
     
     try:
         # Get file data
@@ -149,7 +149,7 @@ async def process_csv_task(task_id: str, file_id: str):
         except Exception as clean_error:
             logger.error(f"Error cleaning up file: {clean_error}")
 
-async def worker_loop():
+async def worker_loop() -> None:
     """
     Main worker loop that processes tasks from the queue
     """
@@ -181,7 +181,7 @@ async def worker_loop():
     finally:
         is_worker_running = False
 
-async def add_task_to_queue(task_id: str, file_id: str):
+async def add_task_to_queue(task_id: str, file_id: str) -> None:
     """
     Add a task to the processing queue
     
@@ -192,7 +192,7 @@ async def add_task_to_queue(task_id: str, file_id: str):
     await task_queue.put({"task_id": task_id, "file_id": file_id})
     logger.info(f"Added task {task_id} to the queue")
 
-async def start_worker():
+async def start_worker() -> None:
     """
     Start the background worker if it's not already running
     """
@@ -206,7 +206,7 @@ async def start_worker():
         asyncio.create_task(worker_loop())
         logger.info("Background worker started")
 
-async def load_pending_tasks():
+async def load_pending_tasks() -> None:
     """
     Load pending tasks from the database and add them to the queue
     """

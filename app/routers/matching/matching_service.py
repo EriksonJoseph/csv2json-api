@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 import math
 
 class MatchingService:
-    def clean_json(self, obj) -> Any:
+    def clean_json(self, obj: Any) -> Any:
         if isinstance(obj, dict):
             return {k: self.clean_json(v) for k, v in obj.items()}
         elif isinstance(obj, list):
@@ -26,10 +26,10 @@ class MatchingService:
         else:
             return obj
 
-    def __init__(self):
-        self.repository = MatchingRepository()
+    def __init__(self) -> None:
+        self.repository: MatchingRepository = MatchingRepository()
         # Thread pool for CPU-bound fuzzy matching operations
-        self.thread_pool = ThreadPoolExecutor(max_workers=4)
+        self.thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=4)
 
     def _clean_text(self, text: str) -> str:
         """Clean and normalize text for better matching"""
@@ -306,13 +306,13 @@ class MatchingService:
             total_records=column_data["total_records"]
         )
 
-    async def get_search_history(self, user_id: str, page: int = 1, limit: int = 10):
+    async def get_search_history(self, user_id: str, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         """Get search history for a user"""
         history_data = await self.repository.get_search_history(user_id, page, limit)
         # Clean the data to prevent JSON serialization errors
         return self.clean_json(history_data)
 
-    async def get_search_result(self, search_id: str, user_id: Optional[str] = None):
+    async def get_search_result(self, search_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
         """Get search result by search_id"""
         result = await self.repository.get_search_result(search_id)
         if not result:

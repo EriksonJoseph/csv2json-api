@@ -1,11 +1,11 @@
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from datetime import datetime
 from bson import ObjectId
 from app.database import get_collection
 from app.utils.serializers import list_serial, individual_serial
 
 class UserRepository:
-    async def create(self, user_data: Dict, created_by: str = "system") -> Dict:
+    async def create(self, user_data: Dict[str, Any], created_by: str = "system") -> Dict[str, Any]:
         """Create a new user in the database"""
         users_collection = await get_collection("users")
         
@@ -21,7 +21,7 @@ class UserRepository:
         user_data["_id"] = str(result.inserted_id)
         return user_data
 
-    async def find_by_id(self, user_id: str) -> Optional[Dict]:
+    async def find_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
         if not ObjectId.is_valid(user_id):
             return None
@@ -32,7 +32,7 @@ class UserRepository:
             return individual_serial(user)
         return None
 
-    async def find_by_username(self, username: str, include_password: bool = False) -> Optional[Dict]:
+    async def find_by_username(self, username: str, include_password: bool = False) -> Optional[Dict[str, Any]]:
         """Get user by username"""
         users_collection = await get_collection("users")
         projection = None if include_password else {"password": 0}
@@ -43,7 +43,7 @@ class UserRepository:
             return user
         return None
 
-    async def find_by_email(self, email: str) -> Optional[Dict]:
+    async def find_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
         users_collection = await get_collection("users")
         user = await users_collection.find_one({"email": email}, {"password": 0})
@@ -51,7 +51,7 @@ class UserRepository:
             return individual_serial(user)
         return None
 
-    async def update_user(self, user_id: str, update_data: Dict, updated_by: str) -> Dict:
+    async def update_user(self, user_id: str, update_data: Dict[str, Any], updated_by: str) -> Optional[Dict[str, Any]]:
         """Update user information
         
         Args:
@@ -100,7 +100,7 @@ class UserRepository:
             print(f"Error updating user {user_id}: {str(e)}")
             raise
 
-    async def get_all_users(self, page: int = 1, limit: int = 10) -> Dict:
+    async def get_all_users(self, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         """Get all users with pagination"""
         users_collection = await get_collection("users")
         

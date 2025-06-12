@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple, Dict
+from typing import Optional, List, Tuple, Dict, Any
 from datetime import datetime
 from bson import ObjectId
 from app.database import get_collection
@@ -6,7 +6,7 @@ from app.utils.serializers import list_serial
 import pprint
 
 class TaskRepository:
-    async def create_task(self, task_data: dict, user_id: str) -> str:
+    async def create_task(self, task_data: Dict[str, Any], user_id: str) -> str:
         """Create a new task in the database"""
         tasks_collection = await get_collection("tasks")
         
@@ -21,7 +21,7 @@ class TaskRepository:
         result = await tasks_collection.insert_one(task_data)
         return str(result.inserted_id)
 
-    async def get_all_tasks(self, page: int = 1, limit: int = 10) -> Tuple[List[dict], int]:
+    async def get_all_tasks(self, page: int = 1, limit: int = 10) -> Tuple[List[Dict[str, Any]], int]:
         """Get all tasks with pagination"""
         tasks_collection = await get_collection("tasks")
         
@@ -47,7 +47,7 @@ class TaskRepository:
         
         return tasks, total
 
-    async def get_task_by_id(self, task_id: str) -> Optional[dict]:
+    async def get_task_by_id(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Get task by ID"""
         tasks_collection = await get_collection("tasks")
         
@@ -69,7 +69,7 @@ class TaskRepository:
         
         return task
 
-    async def update_task(self, task_id: str, task_update: dict, user_id: str) -> dict:
+    async def update_task(self, task_id: str, task_update: Dict[str, Any], user_id: str) -> Dict[str, Any]:
         """Update task"""
         tasks_collection = await get_collection("tasks")
         
@@ -137,7 +137,7 @@ class TaskRepository:
             print(f"Error deleting task {task_id}: {str(e)}")
             return False
 
-    async def get_pending_tasks(self) -> List[Dict]:
+    async def get_pending_tasks(self) -> List[Dict[str, Any]]:
         """Get all pending tasks (is_done_created_doc=False)"""
         tasks_collection = await get_collection("tasks")
         cursor = tasks_collection.find({"is_done_created_doc": False})

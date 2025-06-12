@@ -5,9 +5,9 @@ from app.database import get_collection
 from app.utils.serializers import list_serial, individual_serial
 
 class MatchingRepository:
-    def __init__(self):
-        self.csv_collection_name = "csv"
-        self.search_history_collection_name = "search_history"
+    def __init__(self) -> None:
+        self.csv_collection_name: str = "csv"
+        self.search_history_collection_name: str = "search_history"
 
     async def get_csv_data_by_task_id(self, task_id: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get CSV data for a specific task"""

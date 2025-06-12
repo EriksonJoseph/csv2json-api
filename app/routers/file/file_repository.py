@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from bson import ObjectId
 from datetime import datetime
 from app.database import get_collection
@@ -6,7 +6,7 @@ from app.utils.serializers import list_serial, individual_serial
 from app.routers.file.file_model import UploadStatus
 
 class FileRepository:
-    async def save_file_metadata(self, file_data: Dict, created_by: str) -> str:
+    async def save_file_metadata(self, file_data: Dict[str, Any], created_by: str) -> str:
         """Save file metadata to database"""
         files_collection = await get_collection("files")
         
@@ -22,7 +22,7 @@ class FileRepository:
         result = await files_collection.insert_one(file_data)
         return str(result.inserted_id)
 
-    async def get_file_by_id(self, file_id: str) -> Optional[Dict]:
+    async def get_file_by_id(self, file_id: str) -> Optional[Dict[str, Any]]:
         """Get file by ID"""
         if not ObjectId.is_valid(file_id):
             return None
@@ -33,7 +33,7 @@ class FileRepository:
             return individual_serial(file)
         return None
 
-    async def get_all_files(self, page: int = 1, limit: int = 10) -> Dict:
+    async def get_all_files(self, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         """Get all files with pagination"""
         files_collection = await get_collection("files")
         
@@ -58,7 +58,7 @@ class FileRepository:
         files_collection = await get_collection("files")
         await files_collection.delete_one({"_id": ObjectId(file_id)})
 
-    async def create_chunked_upload(self, upload_data: Dict, created_by: str) -> str:
+    async def create_chunked_upload(self, upload_data: Dict[str, Any], created_by: str) -> str:
         """Create new chunked upload session"""
         uploads_collection = await get_collection("chunked_uploads")
         
@@ -71,7 +71,7 @@ class FileRepository:
         result = await uploads_collection.insert_one(upload_data)
         return str(result.inserted_id)
 
-    async def get_chunked_upload(self, upload_id: str) -> Optional[Dict]:
+    async def get_chunked_upload(self, upload_id: str) -> Optional[Dict[str, Any]]:
         """Get chunked upload session by ID"""
         if not ObjectId.is_valid(upload_id):
             return None
@@ -82,7 +82,7 @@ class FileRepository:
             return individual_serial(upload)
         return None
 
-    async def update_chunked_upload(self, upload_id: str, update_data: Dict, updated_by: str = "worker") -> bool:
+    async def update_chunked_upload(self, upload_id: str, update_data: Dict[str, Any], updated_by: str = "worker") -> bool:
         """Update chunked upload session"""
         if not ObjectId.is_valid(upload_id):
             return False

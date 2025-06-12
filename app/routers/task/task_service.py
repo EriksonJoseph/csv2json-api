@@ -12,18 +12,18 @@ import pandas as pd
 import numpy as np
 
 # Thread pool for CPU-bound tasks
-thread_pool = ThreadPoolExecutor(max_workers=4)
+thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=4)
 
 # Cache for frequently accessed files
 cached_files: Dict[str, Any] = {}
 
 class TaskService:
-    def __init__(self):
-        self.task_repository = TaskRepository()
-        self.file_repository = FileRepository()
+    def __init__(self) -> None:
+        self.task_repository: TaskRepository = TaskRepository()
+        self.file_repository: FileRepository = FileRepository()
 
     @lru_cache(maxsize=128)
-    async def get_cached_file(self, file_id: str):
+    async def get_cached_file(self, file_id: str) -> Optional[Dict[str, Any]]:
         """Get file with caching"""
         if file_id in cached_files:
             return cached_files[file_id]
@@ -32,7 +32,7 @@ class TaskService:
             cached_files[file_id] = file
         return file
 
-    async def create_task(self, task: TaskCreate, user_id: str) -> dict:
+    async def create_task(self, task: TaskCreate, user_id: str) -> Dict[str, Any]:
         """Create a new task with optimized performance"""
         # Validate file_id
         if not ObjectId.is_valid(task.file_id):
@@ -82,7 +82,7 @@ class TaskService:
         
         return created_task
 
-    async def process_large_csv(self, file_path: str, chunk_size: int = 10000):
+    async def process_large_csv(self, file_path: str, chunk_size: int = 10000) -> Any:
         """Process large CSV files in chunks"""
         chunks = []
         for chunk in pd.read_csv(file_path, chunksize=chunk_size):
@@ -93,7 +93,7 @@ class TaskService:
         # Combine chunks
         return pd.concat(chunks, ignore_index=True)
 
-    async def get_all_tasks(self, page: int = 1, limit: int = 10) -> dict:
+    async def get_all_tasks(self, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         """Get all tasks with pagination"""
         tasks, total = await self.task_repository.get_all_tasks(page, limit)
         return {
@@ -103,11 +103,11 @@ class TaskService:
             "limit": limit
         }
 
-    async def get_task_by_id(self, task_id: str) -> Optional[dict]:
+    async def get_task_by_id(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Get task by ID"""
         return await self.task_repository.get_task_by_id(task_id)
 
-    async def update_task(self, task_id: str, task_update: TaskUpdate, user_id: str) -> dict:
+    async def update_task(self, task_id: str, task_update: TaskUpdate, user_id: str) -> Dict[str, Any]:
         """Update task"""
         if task_update.updated_file_date:
             try:

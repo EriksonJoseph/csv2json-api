@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from bson import ObjectId
 import json
 from datetime import datetime
@@ -20,7 +20,7 @@ def list_serial(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         serialized_list.append(serialized_item)
     return serialized_list
 
-def individual_serial(data: Dict[str, Any]) -> Dict[str, Any]:
+def individual_serial(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
     Convert single MongoDB document to serializable format
     """
@@ -41,9 +41,9 @@ class JSONEncoder(json.JSONEncoder):
     """
     Custom JSON encoder that handles MongoDB ObjectId and datetime
     """
-    def default(self, obj):
-        if isinstance(obj, ObjectId):
-            return str(obj)
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        return super().default(obj)
+    def default(self, o: Any) -> Any:
+        if isinstance(o, ObjectId):
+            return str(o)
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return super().default(o)

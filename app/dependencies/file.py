@@ -2,13 +2,13 @@
 import pandas as pd
 import logging
 from app.utils.advanced_performance import tracker, TimedBlock
-from typing import Dict, Any
+from typing import Dict, Any, List
 import pprint
 import os
 from app.database import get_collection
 import csv
 
-logger = logging.getLogger("file")
+logger: logging.Logger = logging.getLogger("file")
 
 def read_csv_file(file_path: str) -> pd.DataFrame:
     """

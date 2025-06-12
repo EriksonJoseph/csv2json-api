@@ -1,20 +1,23 @@
 import time
 import functools
 import logging
-from typing import Callable, Any
+from typing import Callable, Any, TypeVar
+import asyncio
+
+F = TypeVar('F', bound=Callable[..., Any])
 
 # สร้าง logger สำหรับบันทึกข้อมูล performance
-logger = logging.getLogger("performance_tracker")
+logger: logging.Logger = logging.getLogger("performance_tracker")
 
-def setup_logger():
+def setup_logger() -> None:
     """ตั้งค่า logger สำหรับ performance tracker"""
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler: logging.StreamHandler = logging.StreamHandler()
+    formatter: logging.Formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
-def measure_time(func: Callable) -> Callable:
+def measure_time(func: F) -> F:
     """
     Decorator สำหรับวัดเวลาการทำงานของฟังก์ชัน
     
@@ -25,19 +28,19 @@ def measure_time(func: Callable) -> Callable:
         pass
     """
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        start_time: float = time.time()
+        result: Any = func(*args, **kwargs)
+        end_time: float = time.time()
         
-        elapsed_time = end_time - start_time
+        elapsed_time: float = end_time - start_time
         logger.info(f"Function '{func.__name__}' took {elapsed_time:.4f} seconds to execute")
         
         return result
     
     return wrapper
 
-def measure_async_time(func: Callable) -> Callable:
+def measure_async_time(func: F) -> F:
     """
     Decorator สำหรับวัดเวลาการทำงานของฟังก์ชัน async
     
@@ -48,12 +51,12 @@ def measure_async_time(func: Callable) -> Callable:
         pass
     """
     @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = await func(*args, **kwargs)
-        end_time = time.time()
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        start_time: float = time.time()
+        result: Any = await func(*args, **kwargs)
+        end_time: float = time.time()
         
-        elapsed_time = end_time - start_time
+        elapsed_time: float = end_time - start_time
         logger.info(f"Async function '{func.__name__}' took {elapsed_time:.4f} seconds to execute")
         
         return result

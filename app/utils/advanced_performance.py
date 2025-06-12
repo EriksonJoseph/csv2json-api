@@ -13,7 +13,7 @@ class PerformanceTracker:
     """
     
     def __init__(self, log_file: Optional[str] = None, console_log: bool = True, 
-                 alert_threshold: float = 1.0):
+                 alert_threshold: float = 1.0) -> None:
         """
         ตั้งค่า Performance Tracker
         
@@ -28,7 +28,7 @@ class PerformanceTracker:
         self.records: Dict[str, List[Dict[str, Any]]] = {}
         
         # ตั้งค่า logger
-        self.logger = logging.getLogger("performance_tracker")
+        self.logger: logging.Logger = logging.getLogger("performance_tracker")
         self.logger.setLevel(logging.INFO)
         
         # เพิ่ม console handler ถ้าต้องการ
@@ -188,16 +188,16 @@ tracker = PerformanceTracker(
 
 # ฟังก์ชันสำหรับวัด performance ของ code block
 class TimedBlock:
-    def __init__(self, name: str, tracker=tracker):
-        self.name = name
-        self.tracker = tracker
+    def __init__(self, name: str, tracker: PerformanceTracker = tracker) -> None:
+        self.name: str = name
+        self.tracker: PerformanceTracker = tracker
         self.start_time: float = 0.0  # เริ่มต้นด้วย float แทน None
     
-    def __enter__(self):
+    def __enter__(self) -> 'TimedBlock':
         self.start_time = time.time()
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         # ตรวจสอบว่า start_time ถูกตั้งค่าแล้วเพื่อความปลอดภัย
         if self.start_time > 0:
             elapsed_time = time.time() - self.start_time

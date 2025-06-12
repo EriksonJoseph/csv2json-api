@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
-from typing import Dict
+from typing import Dict, Any
 from app.routers.auth.auth_model import UserLogin, Token, RefreshTokenRequest
 from app.routers.user.user_model import UserCreate
 from app.dependencies.auth import get_current_user, require_admin
@@ -17,7 +17,7 @@ auth_service = AuthService()
 
 @router.post("/login", response_model=Token)
 @tracker.measure_async_time
-async def login(request: Request, user_login: UserLogin):
+async def login(request: Request, user_login: UserLogin) -> Token:
     """
     🔐 Login
     """
@@ -30,7 +30,7 @@ async def login(request: Request, user_login: UserLogin):
 
 @router.get("/login_history/{user_id}", response_model=Dict)
 @tracker.measure_async_time
-async def get_login_history(user_id: str, current_user = Depends(require_admin)):
+async def get_login_history(user_id: str, current_user: Any = Depends(require_admin)) -> Dict[str, Any]:
     """
     📋 ดูประวัติการเข้าสู่ระบบ (เฉพาะ Admin)
     """
@@ -39,7 +39,7 @@ async def get_login_history(user_id: str, current_user = Depends(require_admin))
 
 @router.post("/register", response_model=dict)
 @tracker.measure_async_time
-async def register(user: UserCreate):
+async def register(user: UserCreate) -> Dict[str, Any]:
     """
     📝 Register new user
     """
@@ -47,7 +47,7 @@ async def register(user: UserCreate):
 
 @router.get("/me")
 @tracker.measure_async_time
-async def get_current_user_info(current_user = Depends(get_current_user)):
+async def get_current_user_info(current_user: Any = Depends(get_current_user)) -> Dict[str, Any]:
     """
     👤 Get current user info
     """
@@ -59,7 +59,7 @@ async def get_current_user_info(current_user = Depends(get_current_user)):
 
 @router.post("/unlock/{user_id}")
 @tracker.measure_async_time
-async def unlock_user(user_id: str, current_user = Depends(require_admin)):
+async def unlock_user(user_id: str, current_user: Any = Depends(require_admin)) -> Dict[str, Any]:
     """
     🔓 Unlock user account (Admin only)
     
@@ -72,7 +72,7 @@ async def unlock_user(user_id: str, current_user = Depends(require_admin)):
 
 @router.get("/encrypt-password/{password}", response_model=str)
 @tracker.measure_async_time
-async def encrypt_password(password: str):
+async def encrypt_password(password: str) -> str:
     """
     🔐 Encrypt password
     """
@@ -81,7 +81,7 @@ async def encrypt_password(password: str):
 
 @router.post("/refresh", response_model=Token)
 @tracker.measure_async_time
-async def refresh_token(request: Request, refresh_request: RefreshTokenRequest):
+async def refresh_token(request: Request, refresh_request: RefreshTokenRequest) -> Token:
     """
     🔄 Refresh access token using a refresh token
     """
@@ -101,7 +101,7 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest):
 
 @router.post("/logout")
 @tracker.measure_async_time
-async def logout(refresh_request: RefreshTokenRequest):
+async def logout(refresh_request: RefreshTokenRequest) -> Dict[str, Any]:
     """
     🚪 Logout - revoke the refresh token
     """

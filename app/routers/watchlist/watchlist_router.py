@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Body
-from typing import List
+from typing import List, Dict, Any, Optional
 from app.routers.watchlist.watchlist_model import WatchlistModel, WatchlistResponse, WatchlistUpdate
 from app.routers.watchlist.watchlist_service import WatchlistService
-from app.utils.serializers import list_serial, individual_serial
+from app.utils.serializers import individual_serial
 from app.dependencies.auth import get_current_user
 from app.api.schemas import PaginationResponse
 
@@ -21,8 +21,8 @@ router = APIRouter(
 )
 async def create_watchlist(
     watchlist: WatchlistModel = Body(...),
-    current_user = Depends(get_current_user)
-):
+    current_user: Any = Depends(get_current_user)
+) -> WatchlistResponse:
     """
     Create a new watchlist with the following information:
     
@@ -35,7 +35,7 @@ async def create_watchlist(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Failed to create watchlist"
         )
-    return individual_serial(result)
+    return WatchlistResponse(**individual_serial(result))
 
 @router.get(
     "/", 
@@ -45,29 +45,29 @@ async def create_watchlist(
 async def get_all_watchlists(
     page: int = 1,
     limit: int = 10,
-    current_user = Depends(get_current_user)
-):
+    current_user: Any = Depends(get_current_user)
+) -> PaginationResponse[WatchlistResponse]:
     """
     Retrieve all watchlists with pagination
     """
     watchlists, total = await WatchlistService.get_all_watchlists(page, limit, current_user.user_id)
     
     # Format watchlists for response (remove timestamps and keep only necessary fields)
-    formatted_watchlists = []
+    formatted_watchlists: List[Dict[str, Any]] = []
     for watchlist in watchlists:
-        formatted_watchlist = {
+        formatted_watchlist: Dict[str, Any] = {
             "_id": str(watchlist["_id"]),
             "title": watchlist["title"],
             "list": watchlist["list"]
         }
         formatted_watchlists.append(formatted_watchlist)
     
-    return {
-        "list": formatted_watchlists,
-        "total": total,
-        "page": page,
-        "limit": limit
-    }
+    return PaginationResponse(
+        list=formatted_watchlists,
+        total=total,
+        page=page,
+        limit=limit
+    )
 
 @router.get(
     "/{id}", 
@@ -76,8 +76,8 @@ async def get_all_watchlists(
 )
 async def get_watchlist(
     id: str,
-    current_user = Depends(get_current_user)
-):
+    current_user: Any = Depends(get_current_user)
+) -> WatchlistResponse:
     """
     Retrieve a specific watchlist by its ID
     """
@@ -87,7 +87,7 @@ async def get_watchlist(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=f"Watchlist with ID {id} not found"
         )
-    return individual_serial(watchlist)
+    return WatchlistResponse(**individual_serial(watchlist))
 
 @router.put(
     "/{id}", 
@@ -97,8 +97,8 @@ async def get_watchlist(
 async def update_watchlist(
     id: str,
     watchlist_update: WatchlistUpdate = Body(...),
-    current_user = Depends(get_current_user)
-):
+    current_user: Any = Depends(get_current_user)
+) -> WatchlistResponse:
     """
     Update a watchlist with the following information:
     
@@ -119,7 +119,7 @@ async def update_watchlist(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Failed to update watchlist"
         )
-    return individual_serial(updated)
+    return WatchlistResponse(**individual_serial(updated))
 
 @router.delete(
     "/{id}", 
@@ -128,8 +128,8 @@ async def update_watchlist(
 )
 async def delete_watchlist(
     id: str,
-    current_user = Depends(get_current_user)
-):
+    current_user: Any = Depends(get_current_user)
+) -> None:
     """
     Delete a watchlist by its ID
     """
@@ -157,8 +157,8 @@ async def delete_watchlist(
 async def add_item_to_watchlist(
     id: str,
     item: str = Body(..., embed=True),
-    current_user = Depends(get_current_user)
-):
+    current_user: Any = Depends(get_current_user)
+) -> WatchlistResponse:
     """
     Add a single item to a watchlist's list
     
@@ -178,7 +178,7 @@ async def add_item_to_watchlist(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Failed to add item to watchlist"
         )
-    return individual_serial(updated)
+    return WatchlistResponse(**individual_serial(updated))
 
 @router.delete(
     "/{id}/items/{item}", 
@@ -188,8 +188,8 @@ async def add_item_to_watchlist(
 async def remove_item_from_watchlist(
     id: str,
     item: str,
-    current_user = Depends(get_current_user)
-):
+    current_user: Any = Depends(get_current_user)
+) -> WatchlistResponse:
     """
     Remove a single item from a watchlist's list
     """
@@ -207,4 +207,4 @@ async def remove_item_from_watchlist(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Failed to remove item from watchlist"
         )
-    return individual_serial(updated)
+    return WatchlistResponse(**individual_serial(updated))

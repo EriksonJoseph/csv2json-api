@@ -4,7 +4,7 @@ import pandas as pd
 import logging
 from typing import List, Dict, Any, Optional
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 async def process_csv_to_json(input_path: str, output_path: str) -> bool:
     """
@@ -23,13 +23,14 @@ async def process_csv_to_json(input_path: str, output_path: str) -> bool:
             raise FileNotFoundError(f"Input file not found: {input_path}")
         
         # Read CSV file
-        df = pd.read_csv(input_path)
+        df: pd.DataFrame = pd.read_csv(input_path)
         
         # Convert to JSON
-        result = df.to_dict(orient='records')
+        result: List[Dict[str, Any]] = df.to_dict(orient='records')
         
         # Ensure output directory exists
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        output_dir: str = os.path.dirname(output_path)
+        os.makedirs(output_dir, exist_ok=True)
         
         # Write to JSON file
         with open(output_path, 'w', encoding='utf-8') as f:
