@@ -58,7 +58,8 @@ async def get_all_watchlists(
         formatted_watchlist: Dict[str, Any] = {
             "_id": str(watchlist["_id"]),
             "title": watchlist["title"],
-            "list": watchlist["list"]
+            "list": watchlist["list"][:4],
+            "total_names": len(watchlist["list"])
         }
         formatted_watchlists.append(formatted_watchlist)
     

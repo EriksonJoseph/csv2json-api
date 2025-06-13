@@ -1,6 +1,6 @@
 from typing import Optional, Dict, List, Any
 from datetime import datetime
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 from app.database import get_collection
 from app.utils.serializers import list_serial, individual_serial
 

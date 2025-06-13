@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timezone
-from bson import ObjectId  # type: ignore
+from bson import ObjectId # type: ignore  # type: ignore
 from app.database import get_collection
 
 class WatchlistRepository:

@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 from datetime import datetime
 
 # Custom field for handling ObjectId
@@ -34,6 +34,7 @@ class WatchlistModel(BaseModel):
 # Watchlist response model
 class WatchlistResponse(WatchlistModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    total_names: int = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     created_by: Optional[str] = None

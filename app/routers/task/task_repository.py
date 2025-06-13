@@ -1,6 +1,6 @@
 from typing import Optional, List, Tuple, Dict, Any
 from datetime import datetime
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 from app.database import get_collection
 from app.utils.serializers import list_serial
 import pprint
@@ -42,6 +42,7 @@ class TaskRepository:
             task["updated_file_date"] = task["updated_file_date"].strftime("%Y-%m-%d")
             task["created_at"] = task["created_at"].isoformat()
             task["updated_at"] = task["updated_at"].isoformat()
+            task["total_columns"] = len(task["column_names"])
             # Remove column_names from response
             task.pop("column_names", None)
         
@@ -146,7 +147,7 @@ class TaskRepository:
     
     async def update_task_status(self, task_id: str, is_done_created_doc: bool, 
                              column_names: List[str], error_message: Optional[str],
-                             processing_time: Optional[float] = None, user_id: str = "worker") -> None:
+                             processing_time: Optional[float] = None, total_rows: Optional[int] = None, user_id: str = "worker") -> None:
         """Update task status after processing"""
         if not ObjectId.is_valid(task_id):
             raise ValueError("Invalid task_id format")
@@ -164,6 +165,8 @@ class TaskRepository:
             update_data["error_message"] = error_message
         if processing_time is not None:
             update_data["processing_time"] = processing_time
+        if total_rows is not None:
+            update_data["total_rows"] = total_rows
         
         await tasks_collection.update_one(
             {"_id": ObjectId(task_id)},

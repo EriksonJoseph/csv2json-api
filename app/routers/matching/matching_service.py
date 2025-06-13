@@ -1,8 +1,9 @@
 from typing import List, Dict, Any, Tuple, Optional
 import re
-import time
 from rapidfuzz import fuzz
+from bson import ObjectId
 from app.routers.matching.matching_repository import MatchingRepository
+from app.routers.watchlist.watchlist_repository import WatchlistRepository
 from app.routers.matching.matching_model import (
     SingleSearchRequest, BulkSearchRequest, SingleSearchResponse, 
     BulkSearchResponse, BulkSearchItem, MatchedRecord, AvailableColumnsResponse
@@ -121,9 +122,7 @@ class MatchingService:
         return query_name, matches
 
     async def single_search(self, request: SingleSearchRequest, user_id: str) -> SingleSearchResponse:
-        """Perform single name search"""
-        
-        start_time = time.time()
+        """Create single name search task"""
         
         # Validate task exists
         if not await self.repository.validate_task_exists(request.task_id):
@@ -132,158 +131,112 @@ class MatchingService:
         # Get total rows count
         total_rows = await self.repository.get_task_record_count(request.task_id)
         
-        # Get CSV data for the specified columns
-        data = await self.repository.search_in_columns(
-            task_id=request.task_id,
-            columns=request.columns
-        )
-        
-        if not data:
-            raise TaskException("No data found for the specified task")
-        
-        # Perform search
-        _, matched_records = await self._search_single_name_in_data(
-            query_name=request.name,
-            columns=request.columns,
-            data=data,
-            threshold=request.threshold
-        )
-        
-        # Calculate execution time
-        end_time = time.time()
-        execution_time_ms = (end_time - start_time) * 1000
-        
-        # Prepare response
-        best_match_score = matched_records[0].confidence if matched_records else 0.0
-        found = len(matched_records) > 0
-        
-        # Clean data before saving to prevent JSON serialization errors
-        clean_search_data = self.clean_json({
-            "search_id": f"single_{request.task_id}_{hash(request.name)}",
+        # Create pending search entry
+        search_data = self.clean_json({
             "task_id": request.task_id,
             "search_type": "single",
             "query_names": [request.name],
             "columns_used": request.columns,
             "threshold_used": request.threshold,
-            "results_found": len(matched_records),
-            "total_searched": 1,
-            "execution_time_ms": execution_time_ms,
             "total_rows": total_rows,
-            "matched_records": [self.clean_json(record.dict()) for record in matched_records],
+            "status": "pending",
             "created_by": user_id
         })
         
-        # Save search history
-        search_id = await self.repository.save_search_history(clean_search_data, user_id)
+        # Save search history with pending status
+        search_id = await self.repository.save_search_history(search_data, user_id)
         
+        # Add to search queue
+        from app.workers.background_worker import add_search_to_queue
+        await add_search_to_queue(search_id, "single", {
+            "task_id": request.task_id,
+            "name": request.name,
+            "columns": request.columns,
+            "threshold": request.threshold,
+            "user_id": user_id
+        })
+        
+        # Return immediate response with pending status
         response_data = {
             "name": request.name,
-            "matched": best_match_score,
-            "found": found,
+            "matched": 0.0,
+            "found": False,
             "total_rows": total_rows,
-            "execution_time_ms": execution_time_ms,
-            "matched_records": matched_records,
-            "search_id": search_id
+            "execution_time_ms": 0,
+            "matched_records": [],
+            "search_id": search_id,
+            "status": "pending"
         }
         response = SingleSearchResponse(**response_data)
         return response
 
     async def bulk_search(self, request: BulkSearchRequest, user_id: str) -> BulkSearchResponse:
-        """Perform bulk name search"""
-        
-        start_time = time.time()
+        """Create bulk name search task"""
         
         # Validate task exists
         if not await self.repository.validate_task_exists(request.task_id):
             raise TaskException(f"Task {request.task_id} not found or has no data")
         
+        # Validate watchlist_id if provided
+        if request.watchlist_id:
+            if not ObjectId.is_valid(request.watchlist_id):
+                raise TaskException(f"Invalid watchlist_id format: {request.watchlist_id}")
+            
+            watchlist = await WatchlistRepository.get_watchlist_by_id(ObjectId(request.watchlist_id))
+            if not watchlist:
+                raise TaskException(f"Watchlist {request.watchlist_id} not found")
+        
         # Get total rows count
         total_rows = await self.repository.get_task_record_count(request.task_id)
         
-        # Get CSV data for the specified columns
-        data = await self.repository.search_in_columns(
-            task_id=request.task_id,
-            columns=request.columns
-        )
-        
-        if not data:
-            raise TaskException("No data found for the specified task")
-        
-        results = []
-        total_found = 0
-        total_above_threshold = 0
-        best_overall_match_score = 0.0
-        all_matched_records = []
-        
-        # Process each name in the list
-        for name in request.list:
-            _, matched_records = await self._search_single_name_in_data(
-                query_name=name,
-                columns=request.columns,
-                data=data,
-                threshold=request.threshold
-            )
-            
-            # Collect all matched records for saving to history
-            all_matched_records.extend(matched_records)
-            
-            best_match_score = matched_records[0].confidence if matched_records else 0.0
-            found = len(matched_records) > 0
-            best_match = matched_records[0] if matched_records else None
-            
-            # Track the highest score across all searches
-            if best_match_score > best_overall_match_score:
-                best_overall_match_score = best_match_score
-            
-            if found:
-                total_found += 1
-            if best_match_score >= request.threshold:
-                total_above_threshold += 1
-            
-            results.append(BulkSearchItem(
-                name=name,
-                matched=best_match_score,
-                found=found,
-                best_match=best_match
-            ))
-        
-        # Calculate execution time
-        end_time = time.time()
-        execution_time_ms = (end_time - start_time) * 1000
-        
-        # Prepare summary
-        summary = {
-            "total_searched": len(request.list),
-            "total_found": total_found,
-            "total_above_threshold": total_above_threshold,
-            "average_confidence": sum(r.matched for r in results) / len(results) if results else 0,
-            "threshold_used": request.threshold,
-            "total_rows": total_rows,
-            "execution_time_ms": execution_time_ms
-        }
-        
-        # Clean data before saving to prevent JSON serialization errors
-        clean_search_data = self.clean_json({
-            "search_id": f"bulk_{request.task_id}_{hash(str(request.list))}",
+        # Create pending search entry
+        search_data = self.clean_json({
             "task_id": request.task_id,
             "search_type": "bulk",
             "query_names": request.list,
             "columns_used": request.columns,
             "threshold_used": request.threshold,
-            "results_found": total_found,
-            "total_searched": len(request.list),
-            "execution_time_ms": execution_time_ms,
             "total_rows": total_rows,
-            "best_match_score": best_overall_match_score,
-            "matched_records": [self.clean_json(record.dict()) for record in all_matched_records],
+            "watchlist_id": request.watchlist_id,
+            "status": "pending",
             "created_by": user_id
         })
         
-        # Save search history
-        search_id = await self.repository.save_search_history(clean_search_data, user_id)
+        # Save search history with pending status
+        search_id = await self.repository.save_search_history(search_data, user_id)
+        
+        # Add to search queue
+        from app.workers.background_worker import add_search_to_queue
+        await add_search_to_queue(search_id, "bulk", {
+            "task_id": request.task_id,
+            "list": request.list,
+            "columns": request.columns,
+            "threshold": request.threshold,
+            "watchlist_id": request.watchlist_id,
+            "user_id": user_id
+        })
+        
+        # Return immediate response with pending status
+        empty_results = [BulkSearchItem(
+            name=name,
+            matched=0.0,
+            found=False,
+            best_match=None
+        ) for name in request.list]
+        
+        summary = {
+            "total_searched": len(request.list),
+            "total_found": 0,
+            "total_above_threshold": 0,
+            "average_confidence": 0.0,
+            "threshold_used": request.threshold,
+            "total_rows": total_rows,
+            "execution_time_ms": 0,
+            "status": "pending"
+        }
         
         response_data = {
-            "results": results,
+            "results": empty_results,
             "summary": summary,
             "search_id": search_id
         }

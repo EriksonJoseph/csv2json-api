@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 import json
 from datetime import datetime
 

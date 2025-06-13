@@ -9,7 +9,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorCollection
 from mongomock_motor import AsyncMongoMockClient
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 import datetime
 
 # Add the project root to the Python path

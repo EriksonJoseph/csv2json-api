@@ -13,6 +13,7 @@ class BulkSearchRequest(BaseModel):
     threshold: int = Field(default=70, ge=1, le=100, description="Matching threshold percentage (1-100)")
     columns: List[str] = Field(description="List of column names to search in")
     list: List[str] = Field(description="List of names to search for")
+    watchlist_id: Optional[str] = Field(default=None, description="Optional watchlist ID to associate with this search")
 
 class MatchedRecord(BaseModel):
     query_name: str = Field(description="The search query name that was used")
@@ -30,6 +31,7 @@ class SingleSearchResponse(BaseModel):
     execution_time_ms: float = Field(default=0.0, description="Totla executed time")
     matched_records: List[MatchedRecord] = Field(default_factory=list)
     search_id: str = Field(description="MongoDB ObjectId of saved search history")
+    status: Optional[str] = Field(default="completed", description="Search status: pending, processing, completed, failed")
 
 class BulkSearchItem(BaseModel):
     name: str
@@ -60,6 +62,8 @@ class SearchHistoryItem(BaseModel):
     total_searched: int
     execution_time_ms: float = Field(description="Execution time in milliseconds")
     total_rows: int = Field(description="Total rows in the dataset")
+    watchlist_id: Optional[str] = Field(default=None, description="Associated watchlist ID if applicable")
+    status: str = Field(default="completed", description="Search status: pending, processing, completed, failed")
     created_at: datetime
     created_by: str = Field(description="User ID who performed the search")
     updated_at: Optional[datetime] = None

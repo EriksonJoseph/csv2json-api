@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional, Tuple
-from bson import ObjectId
+from bson import ObjectId # type: ignore # type: ignore
 from app.routers.watchlist.watchlist_repository import WatchlistRepository
 from app.routers.watchlist.watchlist_model import WatchlistModel, WatchlistUpdate
 

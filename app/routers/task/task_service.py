@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 from app.routers.task.task_repository import TaskRepository
 from app.routers.task.task_model import TaskCreate, TaskUpdate
 from app.routers.file.file_repository import FileRepository

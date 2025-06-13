@@ -3,7 +3,7 @@ from app.routers.user.user_service import UserService
 from app.routers.user.user_model import UserCreate, UserUpdate
 from app.utils.advanced_performance import tracker
 from app.dependencies.auth import require_admin, require_user, get_current_user
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 from app.api.schemas import PaginationResponse
 from typing import Dict, Any, Optional
 

@@ -67,7 +67,6 @@ async def single_search(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-
 @router.post("/bulk-search", response_model=BulkSearchResponse)
 @tracker.measure_async_time
 async def bulk_search(
@@ -86,7 +85,8 @@ async def bulk_search(
         "task_id": "65f1b2c3d4e5f6789abcdef0",
         "threshold": 70,
         "columns": ["NameAlias_WholeName", "NameAlias_FirstName"],
-        "list": ["John Smith", "Maria Garcia", "Ahmed Hassan"]
+        "list": ["John Smith", "Maria Garcia", "Ahmed Hassan"],
+        "watchlist_id": "65f1b2c3d4e5f6789abcdef1"
     }
     ```
     

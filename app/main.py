@@ -9,7 +9,7 @@ from app.config import get_settings, Settings
 from app.database import initialize_db
 from app.routers import router
 from app.utils.advanced_performance import tracker
-from app.workers.background_worker import start_worker, load_pending_tasks
+from app.workers.background_worker import start_worker, load_pending_tasks, load_pending_searches
 
 # เรียกใช้งาน settings
 settings: Settings = get_settings()
@@ -95,6 +95,9 @@ async def startup_event() -> None:
     
     # Load pending tasks
     await load_pending_tasks()
+    
+    # Load pending searches
+    await load_pending_searches()
 
 # จัดการ shutdown event
 @app.on_event("shutdown")

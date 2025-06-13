@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
 from datetime import datetime
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 from app.routers.user.user_repository import UserRepository
 from app.routers.user.user_model import UserCreate, UserUpdate
 from app.exceptions import UserException

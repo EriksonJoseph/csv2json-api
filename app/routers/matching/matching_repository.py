@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 from app.database import get_collection
 from app.utils.serializers import list_serial, individual_serial
 
@@ -127,6 +127,28 @@ class MatchingRepository:
         cursor = collection.find(query, projection).sort("created_at", -1).skip(skip).limit(limit)
         history = await cursor.to_list(length=limit)
 
+        # Fetch watchlist titles for documents that have watchlist_id
+        # and limit query_names to maximum 5 items
+        watchlist_collection = await get_collection("watchlist")
+        for item in history:
+            item["query_name_length"] = len(item["query_names"])
+            # Limit query_names to maximum 5 items
+            if item.get("query_names") and len(item["query_names"]) > 5:
+                item["query_names"] = item["query_names"][:5]
+            
+            # Fetch watchlist title if watchlist_id exists
+            if item.get("watchlist_id"):
+                try:
+                    watchlist = await watchlist_collection.find_one(
+                        {"_id": ObjectId(item["watchlist_id"])},
+                        {"title": 1}
+                    )
+                    if watchlist:
+                        item["watchlist_title"] = watchlist.get("title", "")
+                except Exception:
+                    # If there's any error (invalid ObjectId, watchlist not found, etc.)
+                    # just skip adding the title
+                    pass
         
         return {
             "list": list_serial(history),
@@ -172,10 +194,45 @@ class MatchingRepository:
                         "matched_record_number": len([
                             item for item in result.get("matched_records", [])
                             if item.get("query_name") == name
-                        ])
+                        ]),
+                        "matched_records": [
+                            item for item in result.get("matched_records", [])
+                            if item.get("query_name") == name
+                        ]
                     }
                     for name in result.get("query_names", [])
-                ]
+                ],
+                "status": result.get("status", "completed")
             }
             return individual_serial(to_return)
         return None
+
+    async def update_search_status(self, search_id: str, status: str, updated_by: str, 
+                                 additional_data: Optional[Dict[str, Any]] = None) -> bool:
+        """Update search status and additional data"""
+        collection = await get_collection(self.search_history_collection_name)
+        
+        update_data = {
+            "status": status,
+            "updated_at": datetime.now(),
+            "updated_by": updated_by
+        }
+        
+        if additional_data:
+            update_data.update(additional_data)
+        
+        result = await collection.update_one(
+            {"_id": ObjectId(search_id)},
+            {"$set": update_data}
+        )
+        
+        return result.modified_count > 0
+
+    async def get_pending_searches(self) -> List[Dict[str, Any]]:
+        """Get all pending search tasks"""
+        collection = await get_collection(self.search_history_collection_name)
+        
+        cursor = collection.find({"status": "pending"})
+        searches = await cursor.to_list(length=None)
+        
+        return list_serial(searches)
