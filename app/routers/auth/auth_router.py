@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
 from typing import Dict, Any
 from app.routers.auth.auth_model import UserLogin, Token, RefreshTokenRequest
-from app.routers.user.user_model import UserCreate
-from app.dependencies.auth import get_current_user, require_admin
+from app.routers.user.user_model import UserCreate, ChangePasswordRequest
+from app.dependencies.auth import get_current_user, require_admin, require_user
 from app.utils.advanced_performance import tracker
 from app.routers.auth.auth_service import AuthService
 from app.routers.user.user_service import UserService
@@ -121,3 +121,17 @@ async def logout(refresh_request: RefreshTokenRequest) -> Dict[str, Any]:
     
     return {"status": "success" if success else "error", 
             "message": "Successfully logged out" if success else "Invalid token"}
+
+@router.patch("/change-password/{user_id}")
+@tracker.measure_async_time
+async def change_password(user_id: str, password_request: ChangePasswordRequest, current_user: Any = Depends(require_user)) -> Dict[str, Any]:
+    """
+    🔐 เปลี่ยนรหัสผ่าน (Admin สามารถเปลี่ยนของทุกคนได้, User สามารถเปลี่ยนของตัวเองได้)
+    """
+    if not current_user.user_id:
+        raise HTTPException(status_code=400, detail="Insufficient permissions")
+    # Check permissions: Admin can change anyone's password, users can only change their own
+    if current_user.user_id != user_id and "admin" not in current_user.roles:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    return await user_service.change_password(user_id, password_request, current_user.user_id)

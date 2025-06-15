@@ -21,15 +21,21 @@ class UserRepository:
         user_data["_id"] = str(result.inserted_id)
         return user_data
 
-    async def find_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+    async def find_by_id(self, user_id: str, include_password: bool = False) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
         if not ObjectId.is_valid(user_id):
             return None
 
         users_collection = await get_collection("users")
-        user = await users_collection.find_one({"_id": ObjectId(user_id)}, {"password": 0})
+        projection = None if include_password else {"password": 0}
+        user = await users_collection.find_one({"_id": ObjectId(user_id)}, projection)
         if user:
-            return individual_serial(user)
+            if include_password:
+                # Convert ObjectId to string manually when including password
+                user["_id"] = str(user["_id"])
+                return user
+            else:
+                return individual_serial(user)
         return None
 
     async def find_by_username(self, username: str, include_password: bool = False) -> Optional[Dict[str, Any]]:
