@@ -3,7 +3,6 @@ from datetime import datetime
 from bson import ObjectId # type: ignore
 from app.database import get_collection
 from app.utils.serializers import list_serial
-import pprint
 
 class TaskRepository:
     async def create_task(self, task_data: Dict[str, Any], user_id: str) -> str:
@@ -65,8 +64,6 @@ class TaskRepository:
                 task["updated_file_date"] = task["updated_file_date"].strftime("%Y-%m-%d")
             task["created_at"] = task["created_at"].isoformat()
             task["updated_at"] = task["updated_at"].isoformat()
-            # Remove column_names from response
-            task.pop("column_names", None)
         
         return task
 
@@ -112,7 +109,6 @@ class TaskRepository:
                 "tasks",           # Main task collection
                 "csv",             # CSV data
                 "search_history",  # Search history
-                "watchlist",       # Watchlist data
                 # Add other collections as needed
             ]
             

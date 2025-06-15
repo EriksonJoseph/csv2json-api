@@ -6,6 +6,7 @@ import os
 import time
 
 from app.config import get_settings, Settings
+from app.logging.logging_config import setup_specific_logging, use_preset, LOGGER_PRESETS
 from app.database import initialize_db
 from app.routers import router
 from app.utils.advanced_performance import tracker
@@ -13,6 +14,24 @@ from app.workers.background_worker import start_worker, load_pending_tasks, load
 
 # เรียกใช้งาน settings
 settings: Settings = get_settings()
+
+# Configure logging based on environment variable
+log_only = os.getenv("LOG_ONLY")
+log_preset = os.getenv("LOG_PRESET", "minimal")
+
+if log_only:
+    # Custom logger list takes priority
+    custom_loggers = log_only.split(",")
+    setup_specific_logging([logger.strip() for logger in custom_loggers])
+    print(f"🔍 Using custom loggers: {[logger.strip() for logger in custom_loggers]}")
+elif log_preset in LOGGER_PRESETS:
+    use_preset(log_preset)
+    print(f"🔍 Using logging preset: {log_preset}")
+else:
+    # Fallback to default
+    custom_loggers = "background_worker,search".split(",")
+    setup_specific_logging([logger.strip() for logger in custom_loggers])
+    print(f"🔍 Using fallback loggers: {[logger.strip() for logger in custom_loggers]}")
 
 # Print all environment variables
 print("🔧 Environment Variables:")
@@ -51,14 +70,14 @@ async def add_process_time_header(request: Request, call_next: Callable[[Request
     user_agent: str = request.headers.get("user-agent", "No User-Agent")
     referer: str = request.headers.get("referer", "No Referer")
     
-    print(f"🌐 API Call from:")
-    print(f"   Origin: {origin}")
-    print(f"   Host: {host}")
-    print(f"   Referer: {referer}")
-    print(f"   User-Agent: {user_agent}")
-    print(f"   Method: {request.method}")
-    print(f"   Path: {request.url.path}")
-    print("=" * 50)
+    # print(f"🌐 API Call from:")
+    # print(f"   Origin: {origin}")
+    # print(f"   Host: {host}")
+    # print(f"   Referer: {referer}")
+    # print(f"   User-Agent: {user_agent}")
+    # print(f"   Method: {request.method}")
+    # print(f"   Path: {request.url.path}")
+    # print("=" * 50)
     
     response: Response = await call_next(request)
     process_time: float = time.time() - start_time
@@ -70,7 +89,7 @@ async def add_process_time_header(request: Request, call_next: Callable[[Request
 @app.get("/")
 async def root() -> Dict[str, Any]:
     return {
-        "message": f"ยินดีต้อนรับสู่ {settings.APP_NAME} API",
+        "message": f"Welcome {settings.APP_NAME} API",
         "docs": "/api/docs",
         "version": "1.0.0"
     }

@@ -3,11 +3,13 @@ from datetime import datetime
 from bson import ObjectId # type: ignore
 from app.database import get_collection
 from app.utils.serializers import list_serial, individual_serial
+from app.routers.task.task_repository import TaskRepository
 
-class MatchingRepository:
+class SearchRepository:
     def __init__(self) -> None:
         self.csv_collection_name: str = "csv"
         self.search_history_collection_name: str = "search_history"
+        self.task_repository = TaskRepository()
 
     async def get_csv_data_by_task_id(self, task_id: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get CSV data for a specific task"""
@@ -99,6 +101,39 @@ class MatchingRepository:
         """Save search history"""
         collection = await get_collection(self.search_history_collection_name)
         
+        # Get task information to save topic and original filename
+        task_id = search_data.get("task_id")
+        if task_id:
+            try:
+                # Get task details
+                tasks_collection = await get_collection("tasks")
+                task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
+                
+                if task:
+                    search_data["task_topic"] = task.get("topic", "")
+                    
+                    # Get file details using file_id from task
+                    file_id = task.get("file_id")
+                    if file_id:
+                        files_collection = await get_collection("files")
+                        file_doc = await files_collection.find_one({"_id": ObjectId(file_id)})
+                        if file_doc:
+                            search_data["original_filename"] = file_doc.get("original_filename", "")
+                        else:
+                            search_data["original_filename"] = ""
+                    else:
+                        search_data["original_filename"] = ""
+                else:
+                    search_data["task_topic"] = ""
+                    search_data["original_filename"] = ""
+            except Exception as e:
+                print(f"Warning: Could not fetch task/file details for search history: {e}")
+                search_data["task_topic"] = ""
+                search_data["original_filename"] = ""
+        else:
+            search_data["task_topic"] = ""
+            search_data["original_filename"] = ""
+        
         # Add audit fields
         now = datetime.now()
         search_data.update({
@@ -122,33 +157,23 @@ class MatchingRepository:
         # Count total records
         total = await collection.count_documents(query)
         
-        # Get paginated results (exclude matched_records for performance)
-        projection = {"matched_records": 0}
+        # Get paginated results (exclude heavy fields for performance)
+        projection = {
+            "matched_records": 0, 
+            "results": 0,
+            "column_options": 0,
+            "query_list": 0,
+            "query_names": 0
+        }
         cursor = collection.find(query, projection).sort("created_at", -1).skip(skip).limit(limit)
         history = await cursor.to_list(length=limit)
 
-        # Fetch watchlist titles for documents that have watchlist_id
-        # and limit query_names to maximum 5 items
-        watchlist_collection = await get_collection("watchlist")
+        # Since we exclude query fields from projection, we need to get the count separately
+        # Add query count information from total_queries field if available
         for item in history:
-            item["query_name_length"] = len(item["query_names"])
-            # Limit query_names to maximum 5 items
-            if item.get("query_names") and len(item["query_names"]) > 5:
-                item["query_names"] = item["query_names"][:5]
-            
-            # Fetch watchlist title if watchlist_id exists
-            if item.get("watchlist_id"):
-                try:
-                    watchlist = await watchlist_collection.find_one(
-                        {"_id": ObjectId(item["watchlist_id"])},
-                        {"title": 1}
-                    )
-                    if watchlist:
-                        item["watchlist_title"] = watchlist.get("title", "")
-                except Exception:
-                    # If there's any error (invalid ObjectId, watchlist not found, etc.)
-                    # just skip adding the title
-                    pass
+            # Use total_queries field if available, otherwise set to 0
+            total_queries = item.get("total_queries", 0)
+            item["query_name_length"] = total_queries
         
         return {
             "list": list_serial(history),
@@ -174,37 +199,13 @@ class MatchingRepository:
         
         result = await collection.find_one({"_id": ObjectId(search_id)})
         if result:
-            to_return = {
-                "_id": result.get("_id", ""),
-                "task_id": result.get("task_id", ''),
-                "total_query_names": len(result.get("query_names", [])),
-                "total_found": len([
-                    name for name in result.get("query_names", [])
-                    if any(matched.get("query_name") == name for matched in result.get("matched_records", []))
-                ]),
-                "execution_time_ms": result.get('execution_time_ms', 0),
-                "threshold_used": result.get("threshold_used", 0),
-                "search_type": result.get('search_type', ''),
-                "columns_used": result.get('columns_used', []),
-                "query_names": result.get("query_names", []),
-                "total_rows": result.get('total_rows', 0),
-                "matched_result": [
-                    {
-                        "query_name": name,
-                        "matched_record_number": len([
-                            item for item in result.get("matched_records", [])
-                            if item.get("query_name") == name
-                        ]),
-                        "matched_records": [
-                            item for item in result.get("matched_records", [])
-                            if item.get("query_name") == name
-                        ]
-                    }
-                    for name in result.get("query_names", [])
-                ],
-                "status": result.get("status", "completed")
-            }
-            return individual_serial(to_return)
+            # Get task details and append to result
+            if result.get("task_id"):
+                task_detail = await self.task_repository.get_task_by_id(result.get("task_id"))
+                if task_detail:
+                    result["task_detail"] = task_detail
+            
+            return individual_serial(result)
         return None
 
     async def update_search_status(self, search_id: str, status: str, updated_by: str, 

@@ -13,7 +13,6 @@ class BulkSearchRequest(BaseModel):
     threshold: int = Field(default=70, ge=1, le=100, description="Matching threshold percentage (1-100)")
     columns: List[str] = Field(description="List of column names to search in")
     list: List[str] = Field(description="List of names to search for")
-    watchlist_id: Optional[str] = Field(default=None, description="Optional watchlist ID to associate with this search")
 
 class MatchedRecord(BaseModel):
     query_name: str = Field(description="The search query name that was used")
@@ -62,7 +61,6 @@ class SearchHistoryItem(BaseModel):
     total_searched: int
     execution_time_ms: float = Field(description="Execution time in milliseconds")
     total_rows: int = Field(description="Total rows in the dataset")
-    watchlist_id: Optional[str] = Field(default=None, description="Associated watchlist ID if applicable")
     status: str = Field(default="completed", description="Search status: pending, processing, completed, failed")
     created_at: datetime
     created_by: str = Field(description="User ID who performed the search")
@@ -74,3 +72,42 @@ class SearchHistoryResponse(BaseModel):
     total: int
     page: int
     limit: int
+
+class ColumnOptions(BaseModel):
+    whole_word: bool = Field(default=False, description="Match whole words only")
+    match_case: bool = Field(default=False, description="Case-sensitive matching")
+    match_length: bool = Field(default=False, description="Match exact length")
+
+class SearchQueryRow(BaseModel):
+    no: int
+    additional_properties: Dict[str, str] = Field(default_factory=dict)
+    
+    def __init__(self, **data):
+        no = data.pop('no', 0)
+        super().__init__(no=no, additional_properties=data)
+    
+    def __getitem__(self, key: str) -> str:
+        if key == 'no':
+            return str(self.no)
+        return self.additional_properties.get(key, "")
+    
+    def get(self, key: str, default: str = "") -> str:
+        if key == 'no':
+            return str(self.no)
+        return self.additional_properties.get(key, default)
+
+class AdvancedSearchRequest(BaseModel):
+    task_id: str
+    column_names: List[str] = Field(description="List of column names to search")
+    column_options: Dict[str, ColumnOptions] = Field(description="Search options for each column")
+    list: List[Dict[str, str]] = Field(description="List of search queries with column values")
+
+class ColumnResult(BaseModel):
+    found: bool = Field(description="Whether any matches were found")
+    count: int = Field(description="Number of matching rows")
+    search_term: str = Field(description="The search term used")
+
+class AdvancedSearchQueryResult(BaseModel):
+    query_no: int = Field(description="Query number from input")
+    query_name: str = Field(description="Combined name from all columns")
+    column_results: Dict[str, ColumnResult] = Field(description="Results for each column")

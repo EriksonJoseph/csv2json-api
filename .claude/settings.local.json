@@ -4,7 +4,13 @@
       "mcp__ide__getDiagnostics",
       "Bash(python:*)",
       "Bash(timeout:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(grep:*)",
+      "Bash(chmod:*)",
+      "Bash(mkdir:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }
