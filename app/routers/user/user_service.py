@@ -48,7 +48,7 @@ class UserService:
             raise UserException("User not found", status_code=404)
 
         # Prepare update data
-        update_data = user_update.dict(exclude_unset=True)
+        update_data = user_update.dict(exclude_unset=False)
         update_data["updated_at"] = datetime.utcnow()
 
         # Check for username update and validate uniqueness

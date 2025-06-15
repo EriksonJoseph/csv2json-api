@@ -51,7 +51,7 @@ class UserRepository:
             return individual_serial(user)
         return None
 
-    async def update_user(self, user_id: str, update_data: Dict[str, Any], updated_by: str) -> Optional[Dict[str, Any]]:
+    async def update_user(self, user_id: str, update_data: Dict[str, Any], updated_by: str) -> Optional[str]:
         """Update user information
         
         Args:
@@ -92,7 +92,7 @@ class UserRepository:
                 
             updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
             if updated_user:
-                return individual_serial(updated_user)
+                return "Update user successfully"
             return None
             
         except Exception as e:

@@ -26,11 +26,18 @@ async def create_user(user: UserCreate, current_user: Any = Depends(require_admi
 
 @router.patch("/{user_id}")
 @tracker.measure_async_time
-async def update_user(user_id: str, user_update: UserUpdate, current_user: Any = Depends(require_admin)) -> Optional[Dict[str, Any]]:
+async def update_user(user_id: str, user_update: UserUpdate, current_user: Any = Depends(require_user)) -> Dict[str, Any]:
     """
-    อัปเดตข้อมูลผู้ใช้ (เฉพาะ Admin)
+    อัปเดตข้อมูลผู้ใช้ (Admin สามารถแก้ไขทุกคน, User สามารถแก้ไขตัวเองได้)
     """
-    return await user_service.update_user(user_id, user_update, current_user.user_id)
+    # Check permissions: Admin can update anyone, users can only update themselves
+    if current_user.user_id != user_id and "admin" not in current_user.roles:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    result = await user_service.update_user(user_id, user_update, current_user.user_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="User not found or update failed")
+    return {"message": "User updated successfully"}
 
 @router.get("/{user_id}")
 @tracker.measure_async_time

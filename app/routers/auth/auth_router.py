@@ -5,6 +5,8 @@ from app.routers.user.user_model import UserCreate
 from app.dependencies.auth import get_current_user, require_admin
 from app.utils.advanced_performance import tracker
 from app.routers.auth.auth_service import AuthService
+from app.routers.user.user_service import UserService
+import pprint
 
 # Create a router instance
 router = APIRouter(
@@ -14,6 +16,8 @@ router = APIRouter(
 
 # Create instance of AuthService
 auth_service = AuthService()
+# Create instance of UserService
+user_service = UserService()
 
 @router.post("/login", response_model=Token)
 @tracker.measure_async_time
@@ -51,10 +55,17 @@ async def get_current_user_info(current_user: Any = Depends(get_current_user)) -
     """
     👤 Get current user info
     """
+    user = await user_service.get_user(current_user.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Not found user")
     return {
         "user_id": current_user.user_id,
         "username": current_user.username,
-        "roles": current_user.roles
+        "roles": current_user.roles,
+        "first_name": user.get("first_name"),
+        "middle_name": user.get("middle_name"),
+        "last_name": user.get("last_name"),
+        "email": user.get("email")
     }
 
 @router.post("/unlock/{user_id}")
