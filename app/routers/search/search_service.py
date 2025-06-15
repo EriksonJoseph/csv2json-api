@@ -130,3 +130,10 @@ class SearchService:
             raise TaskException(f"Search result with ID {search_id} not found")
         # Clean the data to prevent JSON serialization errors
         return self.clean_json(result)
+
+    async def delete_search(self, search_id: str, user_id: str) -> bool:
+        """Delete search history by search_id for a specific user"""
+        success = await self.repository.delete_search_history(search_id, user_id)
+        if not success:
+            raise TaskException(f"Search with ID {search_id} not found or you don't have permission to delete it")
+        return success

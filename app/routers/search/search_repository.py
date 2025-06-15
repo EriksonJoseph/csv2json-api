@@ -237,3 +237,24 @@ class SearchRepository:
         searches = await cursor.to_list(length=None)
         
         return list_serial(searches)
+
+    async def delete_search_history(self, search_id: str, user_id: str) -> bool:
+        """Delete search history by search_id for a specific user"""
+        collection = await get_collection(self.search_history_collection_name)
+        
+        # Check if the search exists and belongs to the user
+        search_doc = await collection.find_one({
+            "_id": ObjectId(search_id),
+            "created_by": user_id
+        })
+        
+        if not search_doc:
+            return False
+        
+        # Delete the search history
+        result = await collection.delete_one({
+            "_id": ObjectId(search_id),
+            "created_by": user_id
+        })
+        
+        return result.deleted_count > 0

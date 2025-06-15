@@ -114,6 +114,25 @@ async def get_search_result(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.delete("/{search_id}")
+@tracker.measure_async_time
+async def delete_search(
+    search_id: str = Path(..., description="Search ID to delete"),
+    current_user: Any = Depends(require_user)
+) -> Dict[str, str]:
+    """
+    🗑️ Delete a search history record
+    
+    Deletes a search history record by search_id. Users can only delete their own search records.
+    """
+    try:
+        await search_service.delete_search(search_id, current_user.user_id)
+        return {"message": "Search history deleted successfully"}
+    except TaskException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
     
 @router.get("/health")
 @tracker.measure_async_time
