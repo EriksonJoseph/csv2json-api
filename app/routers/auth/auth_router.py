@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from typing import Dict, Any
+from app.api.schemas.pagination import PaginationResponse
 from app.routers.auth.auth_model import UserLogin, Token, RefreshTokenRequest
 from app.routers.user.user_model import UserCreate, ChangePasswordRequest
 from app.dependencies.auth import get_current_user, require_admin, require_user
@@ -89,7 +90,6 @@ async def encrypt_password(password: str) -> str:
     """
     return auth_service.get_password_hash(password)
 
-
 @router.post("/refresh", response_model=Token)
 @tracker.measure_async_time
 async def refresh_token(request: Request, refresh_request: RefreshTokenRequest) -> Token:
@@ -108,7 +108,6 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest) 
         )
     
     return new_token
-
 
 @router.post("/logout")
 @tracker.measure_async_time
@@ -135,3 +134,11 @@ async def change_password(user_id: str, password_request: ChangePasswordRequest,
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
     return await user_service.change_password(user_id, password_request, current_user.user_id)
+
+@router.get("/", response_model=PaginationResponse[Dict[str, Any]])
+@tracker.measure_async_time
+async def get_all_users(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100), current_user: Any = Depends(require_user)) -> Dict[str, Any]:
+    """
+    📋 ดึงรายการงานทั้งหมด
+    """
+    return await user_service.get_all_users(page, limit)
