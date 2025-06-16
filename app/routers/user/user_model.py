@@ -12,6 +12,8 @@ class User(BaseModel):
     email: str
     roles: List[UserRole] = [UserRole.USER]
     is_active: bool = True
+    is_locked: bool = False
+    failed_login_attempts: int = 0
     last_login: Optional[datetime] = None
     last_login_ip: Optional[str] = None
     login_history: List[Dict[str, Any]] = Field(default_factory=list)

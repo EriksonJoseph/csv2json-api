@@ -73,7 +73,7 @@ class AuthService:
             return None
             
         # Check if token is expired or revoked
-        if refresh_token.revoked or refresh_token.expires_at < datetime.utcnow():
+        if refresh_token.revoked or (refresh_token.expires_at and refresh_token.expires_at < datetime.utcnow()):
             return None
             
         return refresh_token
@@ -133,11 +133,8 @@ class AuthService:
            await self.record_login_attempt(username, ip_address, False, "User not found")
            return None
            
-       # Check if user is locked
-       user_id: str = str(user["_id"])
-       is_locked: bool = await self.is_user_locked(user_id)
-       
-       if is_locked:
+       # Check if user is locked using is_locked field
+       if user.get("is_locked", False):
            await self.record_login_attempt(username, ip_address, False, "Account locked")
            raise UserException("Account is locked due to too many failed attempts", status_code=401)
            
@@ -145,49 +142,51 @@ class AuthService:
        password_verified: bool = self.verify_password(password, user["password"])
        
        if not password_verified:
-           # Record failed attempt and increment counter
+           # Record failed attempt and increment failed login attempts
            await self.record_login_attempt(username, ip_address, False, "Invalid password")
-           await self.auth_repository.increment_attempts(user_id, ip_address)
+           await self.increment_failed_attempts(str(user["_id"]))
            return None
            
        # Record successful login
        await self.record_login_attempt(username, ip_address, True)
        
-       # Reset failed attempts
-       await self.auth_repository.reset_attempts(user_id)
+       # Reset failed attempts on successful login
+       await self.reset_failed_attempts(str(user["_id"]))
        
        # Update last login
-       await self.update_user_last_login(user_id, ip_address)
+       await self.update_user_last_login(str(user["_id"]), ip_address)
        
        return user
 
-    async def is_user_locked(self, user_id: str) -> bool:
+    async def increment_failed_attempts(self, user_id: str) -> None:
         """
-        Check if user is locked due to too many failed attempts
+        Increment failed login attempts and lock user if threshold reached
         """
-        # Get user login attempts
-        attempts = await self.auth_repository.get_latest_attempts(user_id)
-        if not attempts:
-            return False
+        user = await self.user_repository.find_by_id(user_id)
+        if not user:
+            return
             
-        # If no locked_until, not locked
-        if not attempts.locked_until:
-            # Check if we need to lock the account now
-            if attempts.attempts >= 5:  # Hardcoded for now, move to settings later
-                # Lock account for 30 minutes
-                locked_until = datetime.utcnow() + timedelta(minutes=30)
-                await self.auth_repository.update_lock(user_id, locked_until)
-                return True
-            return False
+        current_attempts = user.get("failed_login_attempts", 0) + 1
+        
+        # Update failed attempts count
+        update_data = {"failed_login_attempts": current_attempts}
+        
+        # Lock user if they reach 5 failed attempts
+        if current_attempts >= 5:
+            update_data["is_locked"] = True
             
-        # Check if lock has expired
-        if attempts.locked_until < datetime.utcnow():
-            # Lock has expired, reset
-            await self.auth_repository.reset_attempts(user_id)
-            return False
-            
-        # Account is locked
-        return True
+        await self.user_repository.update_user(user_id, {"$set": update_data}, user_id)
+        
+    async def reset_failed_attempts(self, user_id: str) -> None:
+        """
+        Reset failed login attempts and unlock user
+        """
+        await self.user_repository.update_user(user_id, {
+            "$set": {
+                "failed_login_attempts": 0,
+                "is_locked": False
+            }
+        }, user_id)
 
     async def record_login_attempt(self, username: str, ip_address: str, success: bool, reason: Optional[str] = None) -> None:
         """
@@ -285,7 +284,7 @@ class AuthService:
         # Create user
         from app.routers.user.user_service import UserService
         user_service = UserService()
-        return await user_service.create_user(user)
+        return await user_service.create_user(user, "")
 
     async def get_login_history(self, user_id: str) -> Optional[LoginAttempt]:
         """
@@ -313,7 +312,7 @@ class AuthService:
 
     async def unlock_user(self, user_id: str) -> bool:
         """
-        Unlock a user by resetting their login attempts
+        Unlock a user by resetting their failed attempts and is_locked flag
         
         Args:
             user_id: The ID of the user to unlock
@@ -322,7 +321,9 @@ class AuthService:
             bool: True if the user was successfully unlocked, False otherwise
         """
         try:
-            # Reset login attempts
+            # Reset failed attempts and unlock user
+            await self.reset_failed_attempts(user_id)
+            # Also reset legacy login attempts for backward compatibility
             await self.auth_repository.delete_attempts(user_id)
             return True
         except Exception as e:
