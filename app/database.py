@@ -1,6 +1,5 @@
-from pymongo import MongoClient
-from app.config import get_settings, Settings
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorCollection
+from app.config import get_settings
+from motor.motor_asyncio import AsyncIOMotorClient
 from typing import Optional, Dict, Any
 import logging
 from datetime import datetime
@@ -14,16 +13,16 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-logger: logging.Logger = logging.getLogger("database")
+logger = logging.getLogger("database")
 
 
 
 # สร้างตัวแปร global เพื่อเก็บ client ไว้ใช้งานต่อ
-_client: Optional[AsyncIOMotorClient] = None
+_client = None
 
-settings: Settings = get_settings()
+settings = get_settings()
 
-async def get_client() -> AsyncIOMotorClient:
+async def get_client():
     global _client
     if _client is None:
         # คอนฟิกการเชื่อมต่อ (ปรับตามความเหมาะสม)
@@ -35,11 +34,11 @@ async def get_client() -> AsyncIOMotorClient:
         )
     return _client
 
-async def get_database() -> AsyncIOMotorDatabase:
+async def get_database():
     client = await get_client()
     return client[settings.MONGODB_DB]
     
-async def get_collection(collection_name: str) -> AsyncIOMotorCollection:
+async def get_collection(collection_name: str):
     db = await get_database()
     return db[collection_name]
 
