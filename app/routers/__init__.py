@@ -5,6 +5,7 @@ from app.routers.task.task_router import router as task_router
 from app.routers.file.file_router import router as file_router
 from app.routers.develop.develop_router import router as develop_router
 from app.routers.search.search_router import router as search_router
+from app.routers.email.email_router import router as email_router
 
 # สร้าง APIRouter หลัก
 router = APIRouter()
@@ -16,3 +17,4 @@ router.include_router(develop_router)
 router.include_router(file_router)
 router.include_router(task_router)
 router.include_router(search_router)
+router.include_router(email_router)

@@ -1,6 +1,6 @@
 from pydantic import BaseSettings
 from functools import lru_cache
-from typing import Dict, Any, List
+from typing import List
 import os
 
 class Settings(BaseSettings):
@@ -24,6 +24,19 @@ class Settings(BaseSettings):
     # CORS
     ALLOW_ORIGIN: str ="*"
     
+    # Email settings
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_FROM_NAME: str = "CSV2JSON API"
+    SMTP_USE_TLS: bool = True
+
+    # Log
+    LOG_ONLY: str = ""
+    LOG_PRESET: str = "minimal"
+    
     class Config:
         # อ่านไฟล์ .env ตาม environment
         env_file = ".env"  # กลับไปใช้แบบเดิมก่อน เพื่อให้ compatible กับ pydantic v1
@@ -42,7 +55,16 @@ def get_settings() -> Settings:
             "JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
             "JWT_REFRESH_SECRET_KEY",
             "JWT_REFRESH_TOKEN_EXPIRE_MINUTES",
-            "ALLOW_ORIGIN"
+            "ALLOW_ORIGIN",
+            "LOG_PRESET",
+            "LOG_ONLY",
+            "SMTP_HOST",
+            "SMTP_PORT",
+            "SMTP_USERNAME",
+            "SMTP_PASSWORD",
+            "SMTP_FROM_EMAIL",
+            "SMTP_FROM_NAME",
+            "SMTP_USE_TLS"
         ]
         for var in env_vars:
             os.environ.pop(var, None)

@@ -41,12 +41,15 @@ logger.info("📋 Background worker module loaded")
 # Global task queue
 task_queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
 search_queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
+email_queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
 is_worker_running: bool = False
 is_search_worker_running: bool = False
+is_email_worker_running: bool = False
 
 # Global variable to track current task
 _current_task: Optional[str] = None
 _current_search: Optional[str] = None
+_current_email: Optional[str] = None
 
 async def get_current_processing_task() -> Optional[Dict[str, Any]]:
     """
@@ -76,6 +79,21 @@ async def get_current_processing_search() -> Optional[Dict[str, Any]]:
     
     return {
         "search_id": _current_search,
+        "status": "processing"
+    }
+
+async def get_current_processing_email() -> Optional[Dict[str, Any]]:
+    """
+    Get current processing email information
+    
+    Returns:
+        dict: Current email information if processing, None otherwise
+    """
+    if _current_email is None:
+        return None
+    
+    return {
+        "email_id": _current_email,
         "status": "processing"
     }
 
@@ -420,6 +438,72 @@ async def process_search_task(search_id: str, search_params: Dict[str, Any]) -> 
         _current_search = None
         logger.debug(f"🔍 [SEARCH-{search_id}] Cleared current search")
 
+async def process_email_task(email_id: str) -> None:
+    """
+    Process an email task
+    
+    Args:
+        email_id: ID of the email task to process
+    """
+    global _current_email
+    _current_email = email_id
+    start_time = datetime.now()
+    logger.info(f"📧 [EMAIL-{email_id}] Starting email processing")
+    
+    try:
+        # Import email service
+        from app.routers.email.email_service import EmailService
+        
+        email_service = EmailService()
+        
+        # Get email task
+        logger.debug(f"📧 [EMAIL-{email_id}] Fetching email task from database")
+        email_task = await email_service.get_email_task(email_id)
+        if not email_task:
+            raise Exception(f"Email task not found: {email_id}")
+        
+        # Check if email was already sent (double check)
+        if email_task.get("sent_at") is not None:
+            logger.warning(f"📧 [EMAIL-{email_id}] ⚠️ Email already sent at {email_task['sent_at']}, skipping")
+            return
+        
+        if email_task.get("status") == "sent":
+            logger.warning(f"📧 [EMAIL-{email_id}] ⚠️ Email status is already 'sent', skipping")
+            return
+        
+        logger.info(f"📧 [EMAIL-{email_id}] Email task ready for sending: to={email_task.get('to_emails')}, subject='{email_task.get('subject')}'")
+        
+        # Send email
+        success = await email_service.send_email_task(email_task)
+        
+        end_time = datetime.now()
+        execution_time = (end_time - start_time).total_seconds()
+        
+        if success:
+            logger.info(f"📧 [EMAIL-{email_id}] ✅ Successfully processed email in {execution_time:.2f} seconds")
+        else:
+            logger.error(f"📧 [EMAIL-{email_id}] ❌ Failed to process email in {execution_time:.2f} seconds")
+        
+    except Exception as e:
+        error_message = str(e)
+        end_time = datetime.now()
+        execution_time = (end_time - start_time).total_seconds()
+        
+        logger.error(f"📧 [EMAIL-{email_id}] ❌ Error processing email in {execution_time:.2f} seconds: {error_message}")
+        
+        # Handle error in email service
+        try:
+            from app.routers.email.email_service import EmailService
+            email_service = EmailService()
+            await email_service._handle_email_failure(email_id, error_message)
+        except Exception as handle_error:
+            logger.error(f"📧 [EMAIL-{email_id}] Error handling email failure: {handle_error}")
+            
+    finally:
+        # Clear current email
+        _current_email = None
+        logger.debug(f"📧 [EMAIL-{email_id}] Cleared current email")
+
 async def worker_loop() -> None:
     """
     Main worker loop that processes tasks from the queue
@@ -484,6 +568,41 @@ async def search_worker_loop() -> None:
     finally:
         is_search_worker_running = False
 
+async def email_worker_loop() -> None:
+    """
+    Main email worker loop that processes email tasks from the queue
+    """
+    global is_email_worker_running
+    is_email_worker_running = True
+    
+    logger.info("Starting email worker loop")
+    
+    try:
+        while True:
+            # Get email task from queue
+            logger.debug("📧 Email worker waiting for tasks...")
+            email_data = await email_queue.get()
+            email_id = email_data["email_id"]
+            
+            logger.info(f"📧 Email worker picked up task: {email_id}")
+            
+            try:
+                await process_email_task(email_id)
+            except Exception as e:
+                logger.error(f"📧 ❌ Uncaught error in email worker: {str(e)}")
+            finally:
+                # Clear current email
+                _current_email = None
+                # Mark email task as done in the queue
+                email_queue.task_done()
+                logger.debug(f"📧 Email worker finished processing {email_id}")
+    except asyncio.CancelledError:
+        logger.info("Email worker loop cancelled")
+    except Exception as e:
+        logger.error(f"Email worker loop error: {str(e)}")
+    finally:
+        is_email_worker_running = False
+
 async def add_task_to_queue(task_id: str, file_id: str) -> None:
     """
     Add a task to the processing queue
@@ -509,11 +628,21 @@ async def add_search_to_queue(search_id: str, search_params: Dict[str, Any]) -> 
     })
     logger.info(f"Added search {search_id} to the queue")
 
+async def add_email_to_queue(email_id: str) -> None:
+    """
+    Add an email task to the processing queue
+    
+    Args:
+        email_id: ID of the email task
+    """
+    await email_queue.put({"email_id": email_id})
+    logger.info(f"📧 ➕ Added email {email_id} to processing queue (queue size: ~{email_queue.qsize()})")
+
 async def start_worker() -> None:
     """
     Start the background worker if it's not already running
     """
-    global is_worker_running, is_search_worker_running
+    global is_worker_running, is_search_worker_running, is_email_worker_running
     
     if not is_worker_running:
         # Create logs directory if it doesn't exist
@@ -527,6 +656,11 @@ async def start_worker() -> None:
         # Start search worker as a background task
         asyncio.create_task(search_worker_loop())
         logger.info("Search worker started")
+    
+    if not is_email_worker_running:
+        # Start email worker as a background task
+        asyncio.create_task(email_worker_loop())
+        logger.info("Email worker started")
 
 async def load_pending_tasks() -> None:
     """
@@ -586,3 +720,41 @@ async def load_pending_searches() -> None:
             
     except Exception as e:
         logger.error(f"Error loading pending searches: {str(e)}")
+
+async def load_pending_emails() -> None:
+    """
+    Load pending email tasks from the database and add them to the queue
+    """
+    logger.info("📧 Loading pending emails from database")
+    
+    try:
+        from app.routers.email.email_service import EmailService
+        
+        email_service = EmailService()
+        
+        # Get pending email tasks
+        pending_emails = await email_service.get_pending_tasks()
+        
+        if pending_emails:
+            logger.info(f"📧 Found {len(pending_emails)} pending emails to process")
+            
+            # Add emails to queue with detailed logging
+            for email in pending_emails:
+                email_id = email["_id"]
+                status = email.get("status", "unknown")
+                sent_at = email.get("sent_at")
+                created_at = email.get("created_at")
+                
+                logger.info(f"📧 Loading email {email_id}: status={status}, sent_at={sent_at}, created_at={created_at}")
+                
+                # Double check: only queue if not already sent
+                if sent_at is None and status in ["pending", "retry"]:
+                    await add_email_to_queue(email_id)
+                    logger.info(f"📧 ✅ Added email {email_id} to queue")
+                else:
+                    logger.warning(f"📧 ⚠️ Skipping email {email_id} - already sent or wrong status")
+        else:
+            logger.info("📧 No pending emails found in database")
+            
+    except Exception as e:
+        logger.error(f"📧 ❌ Error loading pending emails: {str(e)}")

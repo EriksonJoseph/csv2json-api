@@ -14,7 +14,7 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-logger: logging.Logger = logging.getLogger("background_worker")
+logger: logging.Logger = logging.getLogger("database")
 
 
 

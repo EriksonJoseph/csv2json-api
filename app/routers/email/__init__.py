@@ -1,0 +1,1 @@
+# Email module for background email processing

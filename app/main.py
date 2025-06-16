@@ -10,14 +10,14 @@ from app.logging.logging_config import setup_specific_logging, use_preset, LOGGE
 from app.database import initialize_db
 from app.routers import router
 from app.utils.advanced_performance import tracker
-from app.workers.background_worker import start_worker, load_pending_tasks, load_pending_searches
+from app.workers.background_worker import start_worker, load_pending_tasks, load_pending_searches, load_pending_emails
 
 # เรียกใช้งาน settings
 settings: Settings = get_settings()
 
 # Configure logging based on environment variable
-log_only = os.getenv("LOG_ONLY")
-log_preset = os.getenv("LOG_PRESET", "minimal")
+log_only = settings.LOG_ONLY
+log_preset = settings.LOG_PRESET
 
 if log_only:
     # Custom logger list takes priority
@@ -117,6 +117,9 @@ async def startup_event() -> None:
     
     # Load pending searches
     await load_pending_searches()
+    
+    # Load pending emails
+    await load_pending_emails()
 
 # จัดการ shutdown event
 @app.on_event("shutdown")
