@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     # Log
     LOG_ONLY: str = ""
     LOG_PRESET: str = "minimal"
+
+    #FRONT END
+    FRONTEND_URL: str = ""
     
     class Config:
         # อ่านไฟล์ .env ตาม environment
@@ -64,7 +67,8 @@ def get_settings() -> Settings:
             "SMTP_PASSWORD",
             "SMTP_FROM_EMAIL",
             "SMTP_FROM_NAME",
-            "SMTP_USE_TLS"
+            "SMTP_USE_TLS",
+            "FRONTEND_URL"
         ]
         for var in env_vars:
             os.environ.pop(var, None)

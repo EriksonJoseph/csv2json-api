@@ -122,3 +122,9 @@ class UserRepository:
             "page": page,
             "limit": limit
         }
+    
+    async def find_by_verification_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Find user by email verification token"""
+        users_collection = await get_collection("users")
+        user = await users_collection.find_one({"email_verification_token": token})
+        return individual_serial(user) if user else None

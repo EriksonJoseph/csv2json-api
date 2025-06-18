@@ -112,3 +112,19 @@ async def delete_user(user_id: str = Path(..., description="ID ของผู�
         "message": "🗑️ ลบข้อมูลผู้ใช้สำเร็จ",
         "deleted_user": individual_serial(user)
     }
+
+@router.post("/verify-email")
+@tracker.measure_async_time
+async def verify_email(token: str) -> Dict[str, Any]:
+    """
+    ✅ Verify user email address using token
+    """
+    return await user_service.verify_email(token)
+
+@router.post("/{user_id}/resend-verification")
+@tracker.measure_async_time
+async def resend_verification_email(user_id: str, current_user: Any = Depends(require_admin)) -> Dict[str, Any]:
+    """
+    📧 Resend email verification (Admin only)
+    """
+    return await user_service.resend_verification_email(user_id)

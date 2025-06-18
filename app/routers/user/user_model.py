@@ -13,6 +13,9 @@ class User(BaseModel):
     roles: List[UserRole] = [UserRole.USER]
     is_active: bool = True
     is_locked: bool = False
+    is_verify_email: bool = False
+    email_verification_token: Optional[str] = None
+    email_verification_expires: Optional[datetime] = None
     failed_login_attempts: int = 0
     last_login: Optional[datetime] = None
     last_login_ip: Optional[str] = None
@@ -38,6 +41,6 @@ class UserUpdate(BaseModel):
     middle_name: Optional[str] = None
 
 class ChangePasswordRequest(BaseModel):
-    old_password: str
+    current_password: str
     new_password: str
     confirm_password: str

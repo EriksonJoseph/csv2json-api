@@ -10,7 +10,7 @@ from app.routers.email.email_service import EmailService
 from app.routers.user.user_model import User
 from app.routers.auth.auth_model import UserRole
 
-router = APIRouter(prefix="/api/email", tags=["email"])
+router = APIRouter(prefix="/email", tags=["email"])
 
 @router.post("/send", response_model=EmailResponse)
 async def send_email(

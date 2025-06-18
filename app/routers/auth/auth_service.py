@@ -138,6 +138,11 @@ class AuthService:
            await self.record_login_attempt(username, ip_address, False, "Account locked")
            raise UserException("Account is locked due to too many failed attempts", status_code=401)
            
+       # Check if email is verified
+       if not user.get("is_verify_email", False):
+           await self.record_login_attempt(username, ip_address, False, "Email not verified")
+           raise UserException("Please verify your email address before logging in", status_code=401)
+           
        # Verify password
        password_verified: bool = self.verify_password(password, user["password"])
        
