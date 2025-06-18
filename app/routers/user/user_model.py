@@ -16,6 +16,8 @@ class User(BaseModel):
     is_verify_email: bool = False
     email_verification_token: Optional[str] = None
     email_verification_expires: Optional[datetime] = None
+    password_reset_token: Optional[str] = None
+    password_reset_expires: Optional[datetime] = None
     failed_login_attempts: int = 0
     last_login: Optional[datetime] = None
     last_login_ip: Optional[str] = None
@@ -27,12 +29,10 @@ class User(BaseModel):
 
 class UserCreate(BaseModel):
     username: str
-    password: str
-    email: str = ""
-    first_name: str = ""
-    last_name: str = ""
+    email: str
+    first_name: str
+    last_name: str
     middle_name: str = ""
-    roles: List[UserRole] = [UserRole.USER]
 
 class UserUpdate(BaseModel):
     email: Optional[str] = None
@@ -43,4 +43,17 @@ class UserUpdate(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+    confirm_password: str
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+    password: str
+    confirm_password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
     confirm_password: str

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, Path, Depends, HTTPException
 from app.routers.user.user_service import UserService
-from app.routers.user.user_model import UserCreate, UserUpdate
+from app.routers.user.user_model import UserCreate, UserUpdate, ChangePasswordRequest, VerifyEmailRequest, ForgotPasswordRequest, ResetPasswordRequest
 from app.utils.advanced_performance import tracker
 from app.dependencies.auth import require_admin, require_user, get_current_user
 from bson import ObjectId # type: ignore
@@ -115,11 +115,11 @@ async def delete_user(user_id: str = Path(..., description="ID ของผู�
 
 @router.post("/verify-email")
 @tracker.measure_async_time
-async def verify_email(token: str) -> Dict[str, Any]:
+async def verify_email(verify_request: VerifyEmailRequest) -> Dict[str, Any]:
     """
-    ✅ Verify user email address using token
+    ✅ Verify user email address and set password using token
     """
-    return await user_service.verify_email(token)
+    return await user_service.verify_email_with_password(verify_request)
 
 @router.post("/{user_id}/resend-verification")
 @tracker.measure_async_time
@@ -128,3 +128,19 @@ async def resend_verification_email(user_id: str, current_user: Any = Depends(re
     📧 Resend email verification (Admin only)
     """
     return await user_service.resend_verification_email(user_id)
+
+@router.post("/forgot-password")
+@tracker.measure_async_time
+async def forgot_password(request: ForgotPasswordRequest) -> Dict[str, Any]:
+    """
+    🔐 Send password reset email
+    """
+    return await user_service.forgot_password(request)
+
+@router.post("/reset-password")
+@tracker.measure_async_time
+async def reset_password(request: ResetPasswordRequest) -> Dict[str, Any]:
+    """
+    🔄 Reset password using token
+    """
+    return await user_service.reset_password(request)

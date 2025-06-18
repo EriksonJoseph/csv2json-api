@@ -128,3 +128,9 @@ class UserRepository:
         users_collection = await get_collection("users")
         user = await users_collection.find_one({"email_verification_token": token})
         return individual_serial(user) if user else None
+    
+    async def find_by_reset_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Find user by password reset token"""
+        users_collection = await get_collection("users")
+        user = await users_collection.find_one({"password_reset_token": token})
+        return individual_serial(user) if user else None
