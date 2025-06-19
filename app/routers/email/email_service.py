@@ -112,7 +112,7 @@ class EmailService:
             # Create SMTP connection with debugging
             logger.info(f"📧 Creating SMTP connection to {self.settings.SMTP_HOST}:{self.settings.SMTP_PORT}")
             server = smtplib.SMTP(self.settings.SMTP_HOST, self.settings.SMTP_PORT, timeout=30)
-            server.set_debuglevel(1)  # Enable SMTP debugging
+            # server.set_debuglevel(1)  # Disable SMTP debugging for production
             
             logger.info(f"📧 SMTP connection established, server response: {server.noop()}")
             
