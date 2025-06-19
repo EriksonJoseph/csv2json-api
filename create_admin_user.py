@@ -23,7 +23,7 @@ async def create_admin_user():
         # Admin user data
         admin_data = {
             "username": "admin",
-            "password": pwd_context.hash("ThisIsAdmin"),
+            "password": pwd_context.hash("@AdminPassw0rd"),
             "email": "admin@csv2json.com",
             "first_name": "Admin",
             "last_name": "User",
@@ -35,9 +35,16 @@ async def create_admin_user():
             "email_verification_token": None,
             "email_verification_expires": None,
             "failed_login_attempts": 0,
+            "email_verification_token": None,
+            "email_verification_expires": None,
+            "failed_login_attempts": 0,
             "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "created_by": "685309379605eed18d4f72ec",
+            "updated_at": datetime.utcnow(),
+            "updated_by": "Root",
+            "last_login_ip": None
         }
+        
         
         if admin_user:
             # Update existing admin user
