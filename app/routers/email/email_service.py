@@ -220,6 +220,8 @@ class EmailService:
     ) -> bool:
         """Send email immediately without queuing"""
         try:
+            logger.info(f"Creating email task for immediate sending to: {to_emails}")
+            
             task_data = EmailTaskCreate(
                 to_emails=to_emails,
                 subject=subject,
@@ -229,12 +231,21 @@ class EmailService:
                 created_by=created_by
             )
             
+            logger.info(f"Email task data created with subject: {subject}")
+            
             task_id = await self.create_email_task(task_data)
+            logger.info(f"Email task created with ID: {task_id}")
+            
             task = await self.get_email_task(task_id)
+            logger.info(f"Retrieved email task: {task is not None}")
             
             if task:
-                return await self.send_email_task(task)
+                logger.info(f"Sending email task: {task_id}")
+                result = await self.send_email_task(task)
+                logger.info(f"Email send result for task {task_id}: {result}")
+                return result
             
+            logger.error(f"Failed to retrieve email task with ID: {task_id}")
             return False
             
         except Exception as e:

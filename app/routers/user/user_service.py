@@ -152,8 +152,12 @@ class UserService:
     async def send_account_setup_email(self, email: str, token: str, user_name: str) -> bool:
         """Send account setup email with password creation link"""
         try:
+            logger.info(f"Sending account setup email to: {email}")
+            
             # Create verification URL - you can customize this based on your frontend
             verification_url = f"{self.settings.FRONTEND_URL}/verify-email?token={token}" if hasattr(self.settings, 'FRONTEND_URL') else f"http://localhost:3000/verify-email?token={token}"
+            
+            logger.info(f"Verification URL: {verification_url}")
             
             subject = "Complete Your Account Setup"
             
@@ -214,8 +218,10 @@ CSV2JSON Team
 </html>
             """.strip()
             
+            logger.info(f"Calling email service to send email to: {email}")
+            
             # Send email using email service
-            return await self.email_service.send_immediate_email(
+            result = await self.email_service.send_immediate_email(
                 to_emails=[email],
                 subject=subject,
                 body=body,
@@ -223,7 +229,11 @@ CSV2JSON Team
                 created_by="system"
             )
             
+            logger.info(f"Email service returned: {result} for email: {email}")
+            return result
+            
         except Exception as e:
+            logger.error(f"Error sending verification email to {email}: {str(e)}")
             print(f"Error sending verification email: {str(e)}")
             return False
     
@@ -274,6 +284,8 @@ CSV2JSON Team
             update_data = {
                 "password": hashed_password,
                 "is_verify_email": True,
+                "is_locked": False,  # Unlock user when they set password
+                "failed_login_attempts": 0,  # Reset failed attempts
                 "email_verification_token": None,
                 "email_verification_expires": None,
                 "updated_at": datetime.utcnow()
@@ -291,18 +303,26 @@ CSV2JSON Team
     async def resend_verification_email(self, user_id: str) -> Dict[str, Any]:
         """Resend verification email to user"""
         try:
+            logger.info(f"Starting resend verification email process for user_id: {user_id}")
+            
             # Get user
             user = await self.user_repository.find_by_id(user_id)
             if not user:
+                logger.error(f"User not found for user_id: {user_id}")
                 raise UserException("User not found", status_code=404)
+            
+            logger.info(f"Found user: {user.get('username')} with email: {user.get('email')}")
             
             # Check if already verified
             if user.get("is_verify_email", False):
+                logger.warning(f"Email already verified for user_id: {user_id}")
                 raise UserException("Email is already verified", status_code=400)
             
             # Generate new verification token
             verification_token = secrets.token_urlsafe(32)
             verification_expires = datetime.utcnow() + timedelta(hours=24)
+            
+            logger.info(f"Generated new verification token for user_id: {user_id}")
             
             # Update user with new token
             update_data = {
@@ -312,22 +332,28 @@ CSV2JSON Team
             }
             
             await self.user_repository.update_user(user_id, {"$set": update_data}, "system")
+            logger.info(f"Updated user with new verification token for user_id: {user_id}")
             
             # Send new verification email
+            logger.info(f"Attempting to send verification email to: {user['email']}")
             success = await self.send_account_setup_email(
                 user["email"], 
                 verification_token, 
                 user.get("first_name") or user["username"]
             )
             
+            logger.info(f"Email send result: {success} for user_id: {user_id}")
+            
             if success:
                 return {"message": "Verification email sent successfully"}
             else:
+                logger.error(f"Failed to send verification email for user_id: {user_id}")
                 raise UserException("Failed to send verification email", status_code=500)
                 
         except UserException:
             raise
         except Exception as e:
+            logger.error(f"Unexpected error in resend_verification_email for user_id: {user_id}: {str(e)}")
             raise UserException(f"Error resending verification email: {str(e)}", status_code=500)
     
     async def forgot_password(self, request: ForgotPasswordRequest) -> Dict[str, Any]:
@@ -405,6 +431,7 @@ CSV2JSON Team
             # Update user with new password and clear reset token
             user_id = str(user["_id"])
             update_data = {
+                "is_locked": False,
                 "password": hashed_password,
                 "password_reset_token": None,
                 "password_reset_expires": None,
