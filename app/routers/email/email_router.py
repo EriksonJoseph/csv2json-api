@@ -272,3 +272,132 @@ async def retry_email_task(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retry email task: {str(e)}"
         )
+
+@router.get("/debug/connectivity")
+async def test_email_connectivity(
+    current_user: User = Depends(require_roles([UserRole.ADMIN]))
+):
+    """Test email server connectivity and configuration (Admin only)"""
+    import socket
+    import smtplib
+    from app.config import get_settings
+    
+    settings = get_settings()
+    
+    results = {
+        "timestamp": datetime.now().isoformat(),
+        "tests": {},
+        "smtp_config": {
+            "host": settings.SMTP_HOST,
+            "port": settings.SMTP_PORT,
+            "use_tls": settings.SMTP_USE_TLS,
+            "from_email": settings.SMTP_FROM_EMAIL,
+            "username": settings.SMTP_USERNAME,
+            "password_set": bool(settings.SMTP_PASSWORD)
+        }
+    }
+    
+    # Test 1: Basic network connectivity
+    try:
+        sock = socket.create_connection((settings.SMTP_HOST, settings.SMTP_PORT), timeout=10)
+        sock.close()
+        results["tests"]["network_connectivity"] = {"status": "success", "message": "Can connect to SMTP server"}
+    except Exception as e:
+        results["tests"]["network_connectivity"] = {"status": "failed", "error": str(e)}
+    
+    # Test 2: SMTP connection
+    try:
+        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30)
+        response = server.noop()
+        server.quit()
+        results["tests"]["smtp_connection"] = {"status": "success", "message": f"SMTP server responds: {response}"}
+    except Exception as e:
+        results["tests"]["smtp_connection"] = {"status": "failed", "error": str(e)}
+    
+    # Test 3: TLS support
+    if settings.SMTP_USE_TLS:
+        try:
+            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30)
+            server.starttls()
+            server.quit()
+            results["tests"]["tls_support"] = {"status": "success", "message": "TLS connection successful"}
+        except Exception as e:
+            results["tests"]["tls_support"] = {"status": "failed", "error": str(e)}
+    
+    # Test 4: Authentication
+    try:
+        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30)
+        if settings.SMTP_USE_TLS:
+            server.starttls()
+        server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+        server.quit()
+        results["tests"]["authentication"] = {"status": "success", "message": "SMTP authentication successful"}
+    except Exception as e:
+        results["tests"]["authentication"] = {"status": "failed", "error": str(e)}
+    
+    # Test 5: DNS resolution
+    try:
+        import socket
+        ip = socket.gethostbyname(settings.SMTP_HOST)
+        results["tests"]["dns_resolution"] = {"status": "success", "message": f"DNS resolves to {ip}"}
+    except Exception as e:
+        results["tests"]["dns_resolution"] = {"status": "failed", "error": str(e)}
+    
+    # Overall status
+    failed_tests = [test for test, result in results["tests"].items() if result["status"] == "failed"]
+    results["overall_status"] = "failed" if failed_tests else "success"
+    results["failed_tests"] = failed_tests
+    
+    return results
+
+@router.post("/debug/test-send")
+async def test_send_email(
+    test_email: str,
+    current_user: User = Depends(require_roles([UserRole.ADMIN]))
+):
+    """Send a test email immediately for debugging (Admin only)"""
+    try:
+        email_service = EmailService()
+        
+        # Send a simple test email
+        success = await email_service.send_immediate_email(
+            to_emails=[test_email],
+            subject=f"Test Email from CSV2JSON API - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            body=f"""
+This is a test email sent from CSV2JSON API.
+
+Timestamp: {datetime.now().isoformat()}
+Sent by: {current_user.username}
+Server environment: Container/Docker
+
+If you receive this email, the SMTP configuration is working correctly.
+""",
+            html_body=f"""
+<html>
+<body>
+    <h2>Test Email from CSV2JSON API</h2>
+    <p>This is a test email sent from CSV2JSON API.</p>
+    <ul>
+        <li><strong>Timestamp:</strong> {datetime.now().isoformat()}</li>
+        <li><strong>Sent by:</strong> {current_user.username}</li>
+        <li><strong>Server environment:</strong> Container/Docker</li>
+    </ul>
+    <p>If you receive this email, the SMTP configuration is working correctly.</p>
+</body>
+</html>
+""",
+            created_by=current_user.username
+        )
+        
+        return {
+            "success": success,
+            "message": "Test email sent successfully" if success else "Test email failed to send",
+            "timestamp": datetime.now().isoformat(),
+            "recipient": test_email
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send test email: {str(e)}"
+        )

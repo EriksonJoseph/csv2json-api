@@ -83,8 +83,13 @@ class EmailService:
             return False
 
     async def _send_smtp_email(self, msg: MIMEMultipart, task_data: Dict[str, Any]) -> bool:
-        """Send email via SMTP"""
+        """Send email via SMTP with detailed debugging"""
+        server = None
         try:
+            # Log SMTP configuration (without password)
+            logger.info(f"📧 SMTP Config - Host: {self.settings.SMTP_HOST}, Port: {self.settings.SMTP_PORT}, TLS: {self.settings.SMTP_USE_TLS}")
+            logger.info(f"📧 SMTP From: {self.settings.SMTP_FROM_EMAIL}, Username: {self.settings.SMTP_USERNAME}")
+            
             # Validate SMTP configuration
             if not all([
                 self.settings.SMTP_HOST,
@@ -94,13 +99,31 @@ class EmailService:
             ]):
                 raise Exception("SMTP configuration is incomplete")
             
-            # Create SMTP connection
-            server = smtplib.SMTP(self.settings.SMTP_HOST, self.settings.SMTP_PORT)
+            # Test network connectivity first
+            import socket
+            logger.info(f"📧 Testing network connectivity to {self.settings.SMTP_HOST}:{self.settings.SMTP_PORT}")
+            try:
+                sock = socket.create_connection((self.settings.SMTP_HOST, self.settings.SMTP_PORT), timeout=10)
+                sock.close()
+                logger.info(f"📧 ✅ Network connectivity OK")
+            except Exception as conn_error:
+                raise Exception(f"Network connectivity failed: {str(conn_error)}")
+            
+            # Create SMTP connection with debugging
+            logger.info(f"📧 Creating SMTP connection to {self.settings.SMTP_HOST}:{self.settings.SMTP_PORT}")
+            server = smtplib.SMTP(self.settings.SMTP_HOST, self.settings.SMTP_PORT, timeout=30)
+            server.set_debuglevel(1)  # Enable SMTP debugging
+            
+            logger.info(f"📧 SMTP connection established, server response: {server.noop()}")
             
             if self.settings.SMTP_USE_TLS:
+                logger.info(f"📧 Starting TLS...")
                 server.starttls()
+                logger.info(f"📧 TLS started successfully")
             
+            logger.info(f"📧 Logging in with username: {self.settings.SMTP_USERNAME}")
             server.login(self.settings.SMTP_USERNAME, self.settings.SMTP_PASSWORD)
+            logger.info(f"📧 Login successful")
             
             # Prepare recipient list
             recipients = task_data["to_emails"][:]
@@ -109,15 +132,48 @@ class EmailService:
             if task_data.get("bcc_emails"):
                 recipients.extend(task_data["bcc_emails"])
             
+            logger.info(f"📧 Sending email to recipients: {recipients}")
+            logger.info(f"📧 Email subject: {msg['Subject']}")
+            
             # Send email
-            server.send_message(msg, to_addrs=recipients)
+            result = server.send_message(msg, to_addrs=recipients)
+            logger.info(f"📧 Send result: {result}")
+            
             server.quit()
+            logger.info(f"📧 ✅ Email sent successfully")
             
             return True
             
-        except Exception as e:
-            logger.error(f"SMTP error: {str(e)}")
+        except smtplib.SMTPAuthenticationError as e:
+            error_msg = f"SMTP Authentication failed: {str(e)} - Check username/password and app password settings"
+            logger.error(f"📧 ❌ {error_msg}")
             return False
+        except smtplib.SMTPConnectError as e:
+            error_msg = f"SMTP Connection failed: {str(e)} - Check server/port and network connectivity"
+            logger.error(f"📧 ❌ {error_msg}")
+            return False
+        except smtplib.SMTPServerDisconnected as e:
+            error_msg = f"SMTP Server disconnected: {str(e)} - Connection lost during transmission"
+            logger.error(f"📧 ❌ {error_msg}")
+            return False
+        except smtplib.SMTPException as e:
+            error_msg = f"SMTP Error: {str(e)}"
+            logger.error(f"📧 ❌ {error_msg}")
+            return False
+        except socket.error as e:
+            error_msg = f"Network/Socket error: {str(e)} - Check internet connectivity and firewall"
+            logger.error(f"📧 ❌ {error_msg}")
+            return False
+        except Exception as e:
+            error_msg = f"Unexpected error: {str(e)}"
+            logger.error(f"📧 ❌ {error_msg}")
+            return False
+        finally:
+            if server:
+                try:
+                    server.quit()
+                except:
+                    pass
 
     async def _add_attachment(self, msg: MIMEMultipart, file_path: str):
         """Add attachment to email"""
@@ -140,7 +196,7 @@ class EmailService:
             logger.error(f"Error adding attachment {file_path}: {str(e)}")
 
     async def _handle_email_failure(self, task_id: str, error_message: str):
-        """Handle email sending failure"""
+        """Handle email sending failure with detailed error storage"""
         try:
             task = await self.repository.get_email_task_by_id(task_id)
             if not task:
@@ -149,17 +205,30 @@ class EmailService:
             retry_count = task.get("retry_count", 0)
             max_retries = task.get("max_retries", 3)
             
+            # Store detailed error information
+            error_details = {
+                "error_message": error_message,
+                "timestamp": datetime.now().isoformat(),
+                "retry_attempt": retry_count + 1,
+                "smtp_config": {
+                    "host": self.settings.SMTP_HOST,
+                    "port": self.settings.SMTP_PORT,
+                    "use_tls": self.settings.SMTP_USE_TLS,
+                    "from_email": self.settings.SMTP_FROM_EMAIL
+                }
+            }
+            
             if retry_count < max_retries:
                 # Increment retry count and set status to retry
                 await self.repository.increment_retry_count(task_id)
                 await self.repository.update_email_task_status(
-                    task_id, EmailStatus.RETRY, error_message
+                    task_id, EmailStatus.RETRY, error_details
                 )
                 logger.info(f"📧 [EMAIL-{task_id}] 🔄 Marked for retry ({retry_count + 1}/{max_retries})")
             else:
                 # Max retries reached, mark as failed
                 await self.repository.update_email_task_status(
-                    task_id, EmailStatus.FAILED, error_message
+                    task_id, EmailStatus.FAILED, error_details
                 )
                 logger.error(f"📧 [EMAIL-{task_id}] ❌ Max retries reached, marked as failed")
                 
