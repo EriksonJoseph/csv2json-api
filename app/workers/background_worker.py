@@ -363,6 +363,73 @@ async def process_search_task(search_id: str, search_params: Dict[str, Any]) -> 
                         logger.error(f"🔍 [SEARCH-{search_id}] Error processing column '{column}': {col_error}")
                         raise Exception(f"Error processing column '{column}': {str(col_error)}")
                 
+                # Add combined condition check
+                logger.debug(f"🔍 [SEARCH-{search_id}] Processing combined condition for all columns")
+                combined_count = 0
+                combined_search_terms = []
+                
+                # Only check combined condition if we have search terms for all columns
+                has_all_search_terms = True
+                for column in search_params["column_names"]:
+                    search_term = query_row.get(column, "")
+                    if search_term:
+                        combined_search_terms.append(search_term)
+                    else:
+                        has_all_search_terms = False
+                        break
+                
+                if has_all_search_terms and combined_search_terms:
+                    try:
+                        # Build combined match conditions for all columns
+                        combined_match_conditions = {"task_id": search_params["task_id"]}
+                        
+                        for column in search_params["column_names"]:
+                            search_term = query_row.get(column, "")
+                            if search_term:
+                                column_option_dict = search_params["column_options"].get(column, {})
+                                
+                                if hasattr(column_option_dict, 'dict'):
+                                    options = column_option_dict
+                                else:
+                                    options = ColumnOptions(**column_option_dict)
+                                
+                                # Build regex pattern based on options
+                                if options.whole_word and options.match_case:
+                                    pattern = f"^{re.escape(search_term)}$"
+                                    combined_match_conditions[column] = {"$regex": pattern}
+                                elif options.whole_word and not options.match_case:
+                                    pattern = f"^{re.escape(search_term)}$"
+                                    combined_match_conditions[column] = {"$regex": pattern, "$options": "i"}
+                                elif not options.whole_word and options.match_case:
+                                    pattern = re.escape(search_term)
+                                    combined_match_conditions[column] = {"$regex": pattern}
+                                else:
+                                    pattern = re.escape(search_term)
+                                    combined_match_conditions[column] = {"$regex": pattern, "$options": "i"}
+                        
+                        # Execute combined aggregation
+                        combined_pipeline = [
+                            {"$match": combined_match_conditions},
+                            {"$count": "total"}
+                        ]
+                        
+                        logger.debug(f"🔍 [SEARCH-{search_id}] Executing combined aggregation pipeline")
+                        result = await csv_collection.aggregate(combined_pipeline).to_list(length=1)
+                        combined_count = result[0]["total"] if result else 0
+                        logger.debug(f"🔍 [SEARCH-{search_id}] Found {combined_count} combined matches")
+                        
+                    except Exception as combined_error:
+                        logger.error(f"🔍 [SEARCH-{search_id}] Error processing combined condition: {combined_error}")
+                        combined_count = 0
+                
+                # Add combined condition result
+                combined_search_term = " ".join(combined_search_terms) if combined_search_terms else ""
+                column_results["combined_condition"] = {
+                    "found": combined_count > 0,
+                    "count": combined_count,
+                    "search_term": combined_search_term
+                }
+                
                 # Add query result
                 query_result = {
                     "query_no": query_no,
