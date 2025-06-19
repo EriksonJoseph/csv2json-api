@@ -150,7 +150,7 @@ class UserService:
         return {"message": "Password changed successfully"}
 
     async def send_account_setup_email(self, email: str, token: str, user_name: str) -> bool:
-        """Send account setup email with password creation link"""
+        """Send account setup email with password creation link (async via background worker)"""
         try:
             logger.info(f"Sending account setup email to: {email}")
             
@@ -218,23 +218,32 @@ CSV2JSON Team
 </html>
             """.strip()
             
-            logger.info(f"Calling email service to send email to: {email}")
+            logger.info(f"Creating email task for: {email}")
             
-            # Send email using email service
-            result = await self.email_service.send_immediate_email(
+            # Create email task and queue it for background processing
+            from app.routers.email.email_model import EmailTaskCreate, EmailPriority
+            task_data = EmailTaskCreate(
                 to_emails=[email],
                 subject=subject,
                 body=body,
                 html_body=html_body,
+                priority=EmailPriority.HIGH,
                 created_by="system"
             )
             
-            logger.info(f"Email service returned: {result} for email: {email}")
-            return result
+            task_id = await self.email_service.create_email_task(task_data)
+            logger.info(f"Email task created with ID: {task_id}")
+            
+            # Queue the email for background processing
+            from app.workers.background_worker import add_email_to_queue
+            await add_email_to_queue(task_id)
+            
+            logger.info(f"Email task queued for background processing: {task_id}")
+            return True  # Return immediately, don't wait for email to be sent
             
         except Exception as e:
-            logger.error(f"Error sending verification email to {email}: {str(e)}")
-            print(f"Error sending verification email: {str(e)}")
+            logger.error(f"Error creating email task for {email}: {str(e)}")
+            print(f"Error creating email task: {str(e)}")
             return False
     
     async def verify_email_with_password(self, verify_request: VerifyEmailRequest) -> Dict[str, Any]:
@@ -448,7 +457,7 @@ CSV2JSON Team
             raise UserException(f"Error resetting password: {str(e)}", status_code=500)
     
     async def send_password_reset_email(self, email: str, token: str, user_name: str) -> bool:
-        """Send password reset email"""
+        """Send password reset email (async via background worker)"""
         try:
             # Create reset URL
             reset_url = f"{self.settings.FRONTEND_URL}/reset-password?token={token}" if hasattr(self.settings, 'FRONTEND_URL') else f"http://localhost:3000/reset-password?token={token}"
@@ -510,15 +519,28 @@ CSV2JSON Team
 </html>
             """.strip()
             
-            # Send email using email service
-            return await self.email_service.send_immediate_email(
+            # Create email task and queue it for background processing
+            from app.routers.email.email_model import EmailTaskCreate, EmailPriority
+            task_data = EmailTaskCreate(
                 to_emails=[email],
                 subject=subject,
                 body=body,
                 html_body=html_body,
+                priority=EmailPriority.HIGH,
                 created_by="system"
             )
             
+            task_id = await self.email_service.create_email_task(task_data)
+            logger.info(f"Password reset email task created with ID: {task_id}")
+            
+            # Queue the email for background processing
+            from app.workers.background_worker import add_email_to_queue
+            await add_email_to_queue(task_id)
+            
+            logger.info(f"Password reset email task queued for background processing: {task_id}")
+            return True  # Return immediately, don't wait for email to be sent
+            
         except Exception as e:
-            print(f"Error sending password reset email: {str(e)}")
+            logger.error(f"Error creating password reset email task for {email}: {str(e)}")
+            print(f"Error creating password reset email task: {str(e)}")
             return False
