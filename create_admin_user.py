@@ -39,7 +39,7 @@ async def create_admin_user():
             "email_verification_expires": None,
             "failed_login_attempts": 0,
             "created_at": datetime.utcnow(),
-            "created_by": "685309379605eed18d4f72ec",
+            "created_by": "Root",
             "updated_at": datetime.utcnow(),
             "updated_by": "Root",
             "last_login_ip": None
