@@ -30,8 +30,39 @@ class TaskRepository:
         # Count total tasks
         total = await tasks_collection.count_documents({})
         
-        # Get tasks with pagination
-        cursor = tasks_collection.find().sort("created_at", -1).skip(skip).limit(limit)
+        # Use aggregation to join with files collection
+        pipeline = [
+            {
+                "$addFields": {
+                    "file_id_obj": {"$toObjectId": "$file_id"}
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "files",
+                    "localField": "file_id_obj",
+                    "foreignField": "_id",
+                    "as": "file_info"
+                }
+            },
+            {
+                "$unwind": {
+                    "path": "$file_info",
+                    "preserveNullAndEmptyArrays": True
+                }
+            },
+            {
+                "$sort": {"created_at": -1}
+            },
+            {
+                "$skip": skip
+            },
+            {
+                "$limit": limit
+            }
+        ]
+        
+        cursor = tasks_collection.aggregate(pipeline)
         tasks = await cursor.to_list(length=limit)
         
         # Convert ObjectId and datetime to string
@@ -42,8 +73,15 @@ class TaskRepository:
             task["created_at"] = task["created_at"].isoformat()
             task["updated_at"] = task["updated_at"].isoformat()
             task["total_columns"] = len(task["column_names"])
-            # Remove column_names from response
+            # Add original_filename from joined file_info
+            if "file_info" in task and task["file_info"]:
+                task["original_filename"] = task["file_info"].get("original_filename", "")
+            else:
+                task["original_filename"] = ""
+            # Remove column_names, file_info, and temporary field from response
             task.pop("column_names", None)
+            task.pop("file_info", None)
+            task.pop("file_id_obj", None)
         
         return tasks, total
 
@@ -53,17 +91,58 @@ class TaskRepository:
         
         if not ObjectId.is_valid(task_id):
             return None
+        
+        # Use aggregation to join with files collection
+        pipeline = [
+            {
+                "$match": {"_id": ObjectId(task_id)}
+            },
+            {
+                "$addFields": {
+                    "file_id_obj": {"$toObjectId": "$file_id"}
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "files",
+                    "localField": "file_id_obj",
+                    "foreignField": "_id",
+                    "as": "file_info"
+                }
+            },
+            {
+                "$unwind": {
+                    "path": "$file_info",
+                    "preserveNullAndEmptyArrays": True
+                }
+            }
+        ]
+        
+        cursor = tasks_collection.aggregate(pipeline)
+        result = await cursor.to_list(length=1)
+        
+        if not result:
+            return None
             
-        task = await tasks_collection.find_one({"_id": ObjectId(task_id)})
-        if task:
-            task["_id"] = str(task["_id"])
-            # Handle both string and datetime dates
-            if isinstance(task["created_file_date"], datetime):
-                task["created_file_date"] = task["created_file_date"].strftime("%Y-%m-%d")
-            if isinstance(task["updated_file_date"], datetime):
-                task["updated_file_date"] = task["updated_file_date"].strftime("%Y-%m-%d")
-            task["created_at"] = task["created_at"].isoformat()
-            task["updated_at"] = task["updated_at"].isoformat()
+        task = result[0]
+        task["_id"] = str(task["_id"])
+        # Handle both string and datetime dates
+        if isinstance(task["created_file_date"], datetime):
+            task["created_file_date"] = task["created_file_date"].strftime("%Y-%m-%d")
+        if isinstance(task["updated_file_date"], datetime):
+            task["updated_file_date"] = task["updated_file_date"].strftime("%Y-%m-%d")
+        task["created_at"] = task["created_at"].isoformat()
+        task["updated_at"] = task["updated_at"].isoformat()
+        
+        # Add original_filename from joined file_info
+        if "file_info" in task and task["file_info"]:
+            task["original_filename"] = task["file_info"].get("original_filename", "")
+        else:
+            task["original_filename"] = ""
+        
+        # Remove file_info and temporary field from response
+        task.pop("file_info", None)
+        task.pop("file_id_obj", None)
         
         return task
 
